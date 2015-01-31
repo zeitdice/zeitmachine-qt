@@ -1,0 +1,30 @@
+<RCC>
+    <qresource prefix="/about">
+        <file>splash.png</file>
+    </qresource>
+    <qresource prefix="/icons">
+        <file>icons/arrows-alt.png</file>
+        <file>icons/camera.png</file>
+        <file>icons/check.png</file>
+        <file>icons/cogs.png</file>
+        <file>icons/columns.png</file>
+        <file>icons/compress.png</file>
+        <file>icons/download.png</file>
+        <file>icons/expand.png</file>
+        <file>icons/film.png</file>
+        <file>icons/folder-open.png</file>
+        <file>icons/heart.png</file>
+        <file>icons/info.png</file>
+        <file>icons/info-circle.png</file>
+        <file>icons/magic.png</file>
+        <file>icons/pause.png</file>
+        <file>icons/play.png</file>
+        <file>icons/refresh.png</file>
+        <file>icons/repeat.png</file>
+        <file>icons/save.png</file>
+        <file>icons/share.png</file>
+        <file>icons/sort-amount-asc.png</file>
+        <file>icons/stop.png</file>
+        <file>icons/wrench.png</file>
+    </qresource>
+</RCC>

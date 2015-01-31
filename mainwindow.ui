@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>960</width>
+    <height>627</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>zeitdice</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true"/>
+  </property>
+  <property name="documentMode">
+   <bool>false</bool>
+  </property>
+  <property name="tabShape">
+   <enum>QTabWidget::Rounded</enum>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <property name="minimumSize">
+    <size>
+     <width>960</width>
+     <height>540</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>1920</width>
+     <height>1080</height>
+    </size>
+   </property>
+  </widget>
+  <widget class="QStatusBar" name="statusbar">
+   <property name="sizeGripEnabled">
+    <bool>false</bool>
+   </property>
+  </widget>
+  <widget class="QToolBar" name="toolbar">
+   <property name="windowTitle">
+    <string>toolBar</string>
+   </property>
+   <property name="layoutDirection">
+    <enum>Qt::LeftToRight</enum>
+   </property>
+   <property name="autoFillBackground">
+    <bool>true</bool>
+   </property>
+   <property name="movable">
+    <bool>false</bool>
+   </property>
+   <property name="iconSize">
+    <size>
+     <width>32</width>
+     <height>32</height>
+    </size>
+   </property>
+   <property name="toolButtonStyle">
+    <enum>Qt::ToolButtonTextUnderIcon</enum>
+   </property>
+   <property name="floatable">
+    <bool>false</bool>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>BottomToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="actionOpen"/>
+   <addaction name="actionPlay"/>
+   <addaction name="actionLoop"/>
+   <addaction name="actionStop"/>
+   <addaction name="actionCycleFramerates"/>
+   <addaction name="actionFlipVertically"/>
+   <addaction name="actionVignette"/>
+   <addaction name="actionBlackWhite"/>
+   <addaction name="actionSepia"/>
+   <addaction name="actionHipstagram"/>
+   <addaction name="actionMovie"/>
+   <addaction name="actionAbout"/>
+   <addaction name="actionSettings"/>
+  </widget>
+  <action name="actionPlay">
+   <property name="icon">
+    <iconset resource="zeitdice.qrc">
+     <normaloff>:/icons/icons/play.png</normaloff>:/icons/icons/play.png</iconset>
+   </property>
+   <property name="text">
+    <string>Play</string>
+   </property>
+   <property name="iconText">
+    <string>Play</string>
+   </property>
+   <property name="toolTip">
+    <string>Start playback of the sequence</string>
+   </property>
+   <property name="visible">
+    <bool>true</bool>
+   </property>
+   <property name="iconVisibleInMenu">
+    <bool>true</bool>
+   </property>
+  </action>
+  <action name="actionStop">
+   <property name="icon">
+    <iconset resource="zeitdice.qrc">
+     <normaloff>:/icons/icons/stop.png</normaloff>:/icons/icons/stop.png</iconset>
+   </property>
+   <property name="text">
+    <string>Stop</string>
+   </property>
+   <property name="toolTip">
+    <string>Stop playing back the sequence</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="actionLoop">
+   <property name="icon">
+    <iconset resource="zeitdice.qrc">
+     <normaloff>:/icons/icons/repeat.png</normaloff>:/icons/icons/repeat.png</iconset>
+   </property>
+   <property name="text">
+    <string>Loop</string>
+   </property>
+   <property name="toolTip">
+    <string>Enable or disable looped playback</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+L</string>
+   </property>
+  </action>
+  <action name="actionMovie">
+   <property name="icon">
+    <iconset resource="zeitdice.qrc">
+     <normaloff>:/icons/icons/download.png</normaloff>:/icons/icons/download.png</iconset>
+   </property>
+   <property name="text">
+    <string>Export</string>
+   </property>
+   <property name="toolTip">
+    <string>Export the sequence as a movie file</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+M</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="icon">
+    <iconset resource="zeitdice.qrc">
+     <normaloff>:/icons/icons/info.png</normaloff>:/icons/icons/info.png</iconset>
+   </property>
+   <property name="text">
+    <string>About</string>
+   </property>
+   <property name="toolTip">
+    <string>About this application</string>
+   </property>
+  </action>
+  <action name="actionCycleFramerates">
+   <property name="icon">
+    <iconset resource="zeitdice.qrc">
+     <normaloff>:/icons/icons/sort-amount-asc.png</normaloff>:/icons/icons/sort-amount-asc.png</iconset>
+   </property>
+   <property name="text">
+    <string>Cycle Framerates</string>
+   </property>
+   <property name="toolTip">
+    <string>Cycle through all available framerates</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+C</string>
+   </property>
+  </action>
+  <action name="actionVignette">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="zeitdice.qrc">
+     <normaloff>:/icons/icons/magic.png</normaloff>:/icons/icons/magic.png</iconset>
+   </property>
+   <property name="text">
+    <string>Vignette</string>
+   </property>
+   <property name="toolTip">
+    <string>Apply a vignette filter to the video (makes the images darker towards the borders)</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+V</string>
+   </property>
+  </action>
+  <action name="actionBlackWhite">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="zeitdice.qrc">
+     <normaloff>:/icons/icons/magic.png</normaloff>:/icons/icons/magic.png</iconset>
+   </property>
+   <property name="text">
+    <string>B/W</string>
+   </property>
+   <property name="toolTip">
+    <string>Apply a black and white filter to the video</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+B</string>
+   </property>
+  </action>
+  <action name="actionSepia">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="zeitdice.qrc">
+     <normaloff>:/icons/icons/magic.png</normaloff>:/icons/icons/magic.png</iconset>
+   </property>
+   <property name="text">
+    <string>Sepia</string>
+   </property>
+   <property name="toolTip">
+    <string>Apply a sepia color effect to the video</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+E</string>
+   </property>
+  </action>
+  <action name="actionHipstagram">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="zeitdice.qrc">
+     <normaloff>:/icons/icons/magic.png</normaloff>:/icons/icons/magic.png</iconset>
+   </property>
+   <property name="text">
+    <string>Hipstagram</string>
+   </property>
+   <property name="toolTip">
+    <string>Apply the Hipstagram effect to the video</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+H</string>
+   </property>
+  </action>
+  <action name="actionSettings">
+   <property name="icon">
+    <iconset resource="zeitdice.qrc">
+     <normaloff>:/icons/icons/cogs.png</normaloff>:/icons/icons/cogs.png</iconset>
+   </property>
+   <property name="text">
+    <string>Settings</string>
+   </property>
+   <property name="toolTip">
+    <string>Edit settings</string>
+   </property>
+  </action>
+  <action name="actionOpen">
+   <property name="icon">
+    <iconset resource="zeitdice.qrc">
+     <normaloff>:/icons/icons/folder-open.png</normaloff>:/icons/icons/folder-open.png</iconset>
+   </property>
+   <property name="text">
+    <string>Open</string>
+   </property>
+   <property name="toolTip">
+    <string>Choose a folder to open footage from</string>
+   </property>
+  </action>
+  <action name="actionFlipVertically">
+   <property name="icon">
+    <iconset resource="zeitdice.qrc">
+     <normaloff>:/icons/icons/magic.png</normaloff>:/icons/icons/magic.png</iconset>
+   </property>
+   <property name="text">
+    <string>Flip Vertically</string>
+   </property>
+   <property name="toolTip">
+    <string>Flip the footage in the vertical domain</string>
+   </property>
+  </action>
+ </widget>
+ <resources>
+  <include location="zeitdice.qrc"/>
+ </resources>
+ <connections/>
+</ui>

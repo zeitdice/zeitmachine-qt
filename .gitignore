@@ -1,0 +1,6 @@
+# User-specific Qt project settings
+*.pro.user
+
+# Documentation folders generated with Doxygen
+html/
+latex/
