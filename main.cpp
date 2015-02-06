@@ -1,5 +1,22 @@
 #include "mainwindow.h"
 #include <QApplication>
+#include <QtPlugin>
+
+
+// Statically include platform plugin
+
+#if defined(Q_OS_WIN)
+Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
+#endif
+
+#if defined(Q_OS_MAC)
+Q_IMPORT_PLUGIN(QCocoaIntegrationPlugin)
+#endif
+
+#if defined(Q_OS_LINUX)
+Q_IMPORT_PLUGIN(QXcbIntegrationPlugin)
+#endif
+
 
 int main(int argc, char *argv[])
 {

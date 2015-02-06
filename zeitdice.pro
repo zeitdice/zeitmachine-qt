@@ -7,7 +7,10 @@
 QT += core gui widgets opengl
 
 TARGET = zeitdice
+
 TEMPLATE = app
+
+VERSION = 0.1.0
 
 HEADERS  += \
     glvideowidget.h \
@@ -28,23 +31,39 @@ FORMS    += \
 
 RESOURCES = zeitdice.qrc # menu icons and about image
 
-QMAKE_CXXFLAGS += \
-    -I/usr/include/ffmpeg/ \ # Fedora 21 ffmpeg headers
-    -I/opt/local/include/    # OS X ffmpeg headers
+win64 {
 
-LIBS += \
-    # -L/usr/local/lib/ \ # Fedora ffmpeg libraries
-    /usr/local/lib/libavfilter.a \
-    /usr/local/lib/libavformat.a \
-    /usr/local/lib/libavcodec.a \
-    /usr/local/lib/libswresample.a \
-    /usr/local/lib/libswscale.a \
-    /usr/local/lib/libavutil.a \
-    /usr/local/lib/liblzma.a \
-    /usr/local/lib/libz.a
-    #-L/opt/local/lib \ # OS X ffmpeg shared libraries
-    # -lavcodec -lavfilter -lavformat -lavutil -lswscale ### generic linkage disabled
+    # Coming up as well
 
+}
+
+mac {
+
+    # Preliminary non-generic build configuration on Michael's OS X
+
+    QMAKE_CXXFLAGS += \
+        -I/home/yomichi/zeitdice/qtapp-buildtool/installs/include
+
+    LIBS += \
+        -L/home/yomichi/zeitdice/qtapp-buildtool/installs/lib \
+        -lavfilter -lavformat -lavcodec -lswresample -lswscale -lavutil -lz -lx264 \
+        -L/home/yomichi/zeitdice/qtapp-buildtool/installs/plugins/platforms -lqcocoa
+
+}
+
+linux {
+
+    # Preliminary non-generic build configuration on Simon's Fedora 21
+
+    QMAKE_CXXFLAGS += \
+        -I/home/simonrepp/zeitdice/qtapp-buildtool/installs/include
+
+    linux:LIBS += \
+        -L/home/simonrepp/zeitdice/qtapp-buildtool/installs/lib \
+        -lavfilter -lavformat -lavcodec -lswresample -lswscale -lavutil -lz -lx264 \
+        -L/home/simonrepp/zeitdice/qtapp-buildtool/installs/plugins/platforms -lqxcb
+
+}
 
 OTHER_FILES += \
     .gitignore \
