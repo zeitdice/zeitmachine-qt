@@ -219,7 +219,6 @@ void MainWindow::UncheckOtherFilters(QAction *action)
     if(action != this->ui->actionHipstagram) { this->ui->actionHipstagram->setChecked(false); }
 }
 
-
 void MainWindow::on_actionOpen_triggered()
 {
     QDir footage_root(QCoreApplication::applicationDirPath());
@@ -238,22 +237,31 @@ void MainWindow::on_actionOpen_triggered()
 
     #endif
 
-    QString footage_folder = QFileDialog::getExistingDirectory(this,
-                                                               "Open Footage Folder",
-                                                               footage_root.absolutePath(),
-                                                               QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks );
+    QString dir_name = QFileDialog::getExistingDirectory(this,
+                                                         "Open Footage Folder",
+                                                         footage_root.absolutePath(),
+                                                         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks );
 
-    if(!footage_folder.isEmpty()) {
-        // Select footage files in most recent footage folder
-        QDir footage_files = QDir(footage_folder, "*", QDir::Name, QDir::Files | QDir::NoDotAndDotDot);
+    if(!dir_name.isEmpty()) {
 
-        // Filter for allowed image types
-        QStringList image_types;
-        image_types << "*.jpg" << "*.jpeg" << "*.png";
-        footage_files.setNameFilters(image_types);
+        QDir dir = QDir(dir_name);
 
-        emit LoadSignal(footage_files.entryInfoList());
+        dir.setFilter(QDir::Files);
 
+        QStringList image_extension_filters{"*.jpg","*.jpeg","*.png"};
+        dir.setNameFilters(image_extension_filters);
+
+        QCollator collator;
+        collator.setNumericMode(true);
+        collator.setCaseSensitivity(Qt::CaseInsensitive);
+
+        QFileInfoList files = dir.entryInfoList();
+
+        std::sort(files.begin(), files.end(), [&](const QFileInfo& a, const QFileInfo& b) {
+            return collator.compare(a.baseName(), b.baseName()) < 0;
+        });
+
+        emit LoadSignal(files);
         //emit CacheSignal();
     }
 }

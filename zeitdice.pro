@@ -12,6 +12,8 @@ TEMPLATE = app
 
 VERSION = 0.1.0
 
+CONFIG += c++11
+
 HEADERS  += \
     glvideowidget.h \
     mainwindow.h \

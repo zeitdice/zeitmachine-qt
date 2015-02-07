@@ -1,9 +1,10 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include <QMainWindow>
+#include <QCollator>
 #include <QDir>
 #include <QFileDialog>
+#include <QMainWindow>
 #include <QProgressBar>
 #include <QSplashScreen>
 #include <QThread>
