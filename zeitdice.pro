@@ -12,6 +12,8 @@ TEMPLATE = app
 
 VERSION = 0.1.0
 
+CONFIG += c++11
+
 HEADERS  += \
     glvideowidget.h \
     mainwindow.h \
@@ -42,12 +44,13 @@ mac {
     # Preliminary non-generic build configuration on Michael's OS X
 
     QMAKE_CXXFLAGS += \
-        -I/home/yomichi/zeitdice/qtapp-buildtool/installs/include
+        -I/Users/mschwanzer/Dropbox/WORK/ZEITDICE/qtapp-buildtool/installs/include
 
     LIBS += \
-        -L/home/yomichi/zeitdice/qtapp-buildtool/installs/lib \
+        -L/Users/mschwanzer/Dropbox/WORK/ZEITDICE/qtapp-buildtool/installs/lib \
         -lavfilter -lavformat -lavcodec -lswresample -lswscale -lavutil -lz -lx264 \
-        -L/home/yomichi/zeitdice/qtapp-buildtool/installs/plugins/platforms -lqcocoa
+        -L/Users/mschwanzer/Dropbox/WORK/ZEITDICE/qtapp-buildtool/installs/plugins/platforms -lqcocoa \
+        -framework CoreFoundation -framework CoreVideo -framework VideoDecodeAcceleration
 
 }
 
