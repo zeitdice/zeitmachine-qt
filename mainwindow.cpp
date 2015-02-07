@@ -221,25 +221,25 @@ void MainWindow::UncheckOtherFilters(QAction *action)
 
 void MainWindow::on_actionOpen_triggered()
 {
-    QDir footage_root(QCoreApplication::applicationDirPath());
+    QDir initial_dir(QCoreApplication::applicationDirPath());
 
     // Optional path correction for different operating systems
     #if defined(Q_OS_WIN)
 
     #elif defined(Q_OS_MAC)
 
-    //    if (footage_root.dirName() == "MacOS")
-    //    {
-    //        footage_root.cdUp();
-    //        footage_root.cdUp();
-    //        footage_root.cdUp();
-    //    }
+        if (initial_dir.dirName() == "MacOS")
+        {
+            initial_dir.cdUp();
+            initial_dir.cdUp();
+            initial_dir.cdUp();
+        }
 
     #endif
 
     QString dir_name = QFileDialog::getExistingDirectory(this,
                                                          "Open Footage Folder",
-                                                         footage_root.absolutePath(),
+                                                         initial_dir.absolutePath(),
                                                          QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks );
 
     if(!dir_name.isEmpty()) {

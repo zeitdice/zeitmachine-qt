@@ -49,6 +49,7 @@ mac {
     LIBS += \
         -L/Users/mschwanzer/Dropbox/WORK/ZEITDICE/qtapp-buildtool/installs/lib \
         -lavfilter -lavformat -lavcodec -lswresample -lswscale -lavutil -lz -lx264 \
+        -lQt5OpenGL -lQt5Widgets -lQt5Gui -lQt5Core \
         -L/Users/mschwanzer/Dropbox/WORK/ZEITDICE/qtapp-buildtool/installs/plugins/platforms -lqcocoa \
         -framework CoreFoundation -framework CoreVideo -framework VideoDecodeAcceleration
 
