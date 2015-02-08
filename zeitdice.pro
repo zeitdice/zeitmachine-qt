@@ -62,7 +62,7 @@ linux {
     QMAKE_CXXFLAGS += \
         -I/home/simonrepp/zeitdice/qtapp-buildtool/installs/include
 
-    linux:LIBS += \
+    LIBS += \
         -L/home/simonrepp/zeitdice/qtapp-buildtool/installs/lib \
         -lavfilter -lavformat -lavcodec -lswresample -lswscale -lavutil -lz -lx264 \
         -L/home/simonrepp/zeitdice/qtapp-buildtool/installs/plugins/platforms -lqxcb
