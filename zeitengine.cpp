@@ -113,6 +113,10 @@ void ZeitEngine::Load(const QFileInfoList& sequence)
 
     preview_flag = true;
 
+    control_mutex.lock();
+    stop_flag = false;
+    control_mutex.unlock();
+
     Play();
 }
 

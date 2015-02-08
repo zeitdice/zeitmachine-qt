@@ -221,6 +221,15 @@ void MainWindow::UncheckOtherFilters(QAction *action)
 
 void MainWindow::on_actionOpen_triggered()
 {
+    zeitengine->control_mutex.lock();
+    zeitengine->filter_flag = ZEIT_FILTER_NONE;
+    zeitengine->configured_framerate = ZEIT_RATE_24p;
+    zeitengine->loop_flag = false;
+    zeitengine->stop_flag = true;
+    zeitengine->control_mutex.unlock();
+
+    UncheckOtherFilters(NULL);
+
     QDir initial_dir(QCoreApplication::applicationDirPath());
 
     // Optional path correction for different operating systems
