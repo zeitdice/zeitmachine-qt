@@ -25,7 +25,9 @@ void GLVideoWidget::ConfigureVideo(const unsigned int width, const unsigned int 
     setFixedWidth(width);
     setFixedHeight(height);
 
+    image_mutex.lock();
     image = new QImage(width, height, pixel_format);
+    image_mutex.unlock();
 }
 
 void GLVideoWidget::DelegateUpdate()

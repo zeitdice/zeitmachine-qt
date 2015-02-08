@@ -73,8 +73,8 @@ class ZeitEngine : public QObject
 
     QElapsedTimer timer;
 
-    const static unsigned int DISPLAY_WIDTH = 960;
-    const static unsigned int DISPLAY_HEIGHT = 540;
+    const static unsigned int DISPLAY_MAX_WIDTH = 960;
+    const static unsigned int DISPLAY_MAX_HEIGHT = 540;
     const static AVPixelFormat DISPLAY_AV_PIXEL_FORMAT = AV_PIX_FMT_RGB24;
     const static QImage::Format DISPLAY_QT_PIXEL_FORMAT = QImage::Format_RGB888;
 
@@ -90,6 +90,10 @@ class ZeitEngine : public QObject
     // Display data
 
     GLVideoWidget* display;
+
+    unsigned int display_width;
+    unsigned int display_height;
+    bool display_initialized;    //!< Flag to check for display being initialized
 
     // Cache members
     //uint8_t **cache_data;

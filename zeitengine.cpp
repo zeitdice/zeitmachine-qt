@@ -14,6 +14,7 @@ ZeitEngine::ZeitEngine(GLVideoWidget* video_widget, QObject *parent) :
     }
 
     display = video_widget;
+    display_initialized = false;
 
     configured_framerate = ZEIT_RATE_24p;
 
@@ -45,6 +46,9 @@ ZeitEngine::ZeitEngine(GLVideoWidget* video_widget, QObject *parent) :
 ZeitEngine::~ZeitEngine()
 {
     FreeDecoder();
+    FreeScaler();
+    FreeFilter();
+    FreeFilterData();
 }
 
 void ZeitEngine::InitDecoder()
@@ -96,6 +100,13 @@ void ZeitEngine::FreeDecoder()
 
 void ZeitEngine::Load(const QFileInfoList& sequence)
 {
+    display_initialized = false; // ATTENTION - might make sense to abstract this whole display init with InitDisplay() FreeDisplay() and such too
+
+    FreeDecoder();
+    FreeScaler();
+    FreeFilter();
+    FreeFilterData();
+
     source_sequence = sequence;
 
     InitDecoder();
@@ -114,8 +125,8 @@ void ZeitEngine::Cache()
         DecodeFrame();
 
         ScaleFrame(decoder_frame,
-                   DISPLAY_WIDTH,
-                   DISPLAY_HEIGHT,
+                   display_width,
+                   display_height,
                    DISPLAY_AV_PIXEL_FORMAT);
     }
 
@@ -129,7 +140,6 @@ void ZeitEngine::Play()
 {
     sequence_iterator = source_sequence.constBegin();
 
-    emit VideoConfigurationUpdated(DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_QT_PIXEL_FORMAT);
     emit MessageUpdated("Playback started");
 
     while(true) {
@@ -169,9 +179,26 @@ void ZeitEngine::Play()
 
         DecodeFrame();
 
+        if(!display_initialized) {
+            display_width = decoder_frame->width;
+            display_height = decoder_frame->height;
+
+            emit VideoConfigurationUpdated(display_width, display_height, DISPLAY_QT_PIXEL_FORMAT);
+
+            while(!display_initialized) {
+                qDebug() << "ATTENTION: SLEEPING NEEDS TO BE IMPLEMENTED HERE INSTEAD OF THIS REMINDER MESSAGE";
+
+                display->image_mutex.lock();
+                display_initialized = (display->image != NULL);
+                display->image_mutex.unlock();
+            }
+        }
+
+        // extract size
+
         ScaleFrame(decoder_frame,
-                   DISPLAY_WIDTH,
-                   DISPLAY_HEIGHT,
+                   display_width,
+                   display_height,
                    DISPLAY_AV_PIXEL_FORMAT);
 
         if(filter != ZEIT_FILTER_NONE) {
