@@ -183,6 +183,14 @@ void ZeitEngine::Play()
             display_width = decoder_frame->width;
             display_height = decoder_frame->height;
 
+            if(display_width > DISPLAY_MAX_WIDTH) {
+                display_height = (float)display_height * ((float)DISPLAY_MAX_WIDTH / (float)display_width);
+                display_width = DISPLAY_MAX_WIDTH;
+            } else if(display_height > DISPLAY_MAX_HEIGHT) {
+                display_width = (float)display_width * ((float)DISPLAY_MAX_HEIGHT / (float)display_height);
+                display_height = DISPLAY_MAX_HEIGHT;
+            }
+
             emit VideoConfigurationUpdated(display_width, display_height, DISPLAY_QT_PIXEL_FORMAT);
 
             while(!display_initialized) {
