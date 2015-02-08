@@ -198,7 +198,17 @@ void ZeitEngine::Play()
             emit VideoConfigurationUpdated(display_width, display_height, DISPLAY_QT_PIXEL_FORMAT);
 
             while(!display_initialized) {
-                qDebug() << "ATTENTION: SLEEPING NEEDS TO BE IMPLEMENTED HERE INSTEAD OF THIS REMINDER MESSAGE";
+
+                // Wait for 2 ms
+
+                QMutex wait_mutex;
+
+                wait_mutex.lock();
+
+                QWaitCondition wait_condition;
+                wait_condition.wait(&wait_mutex, 2);
+
+                wait_mutex.unlock();
 
                 display->image_mutex.lock();
                 display_initialized = (display->image != NULL);

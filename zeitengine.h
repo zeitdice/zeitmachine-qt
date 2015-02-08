@@ -14,6 +14,7 @@
 #include <QMutex>
 #include <QString>
 #include <QThread>
+#include <QWaitCondition>
 
 #include <iostream>
 #include <fstream>
