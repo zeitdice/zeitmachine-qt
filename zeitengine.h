@@ -268,6 +268,12 @@ class ZeitEngine : public QObject
      */
     void CloseExport();
 
+    /*!
+     * \brief Sleep for x msec
+     * \param msec Number of milliseconds to sleep
+     */
+    void Sleep(const unsigned int msec);
+
 public:
 
     /*!

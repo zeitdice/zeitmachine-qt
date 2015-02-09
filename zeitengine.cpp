@@ -199,16 +199,7 @@ void ZeitEngine::Play()
 
             while(!display_initialized) {
 
-                // Wait for 2 ms
-
-                QMutex wait_mutex;
-
-                wait_mutex.lock();
-
-                QWaitCondition wait_condition;
-                wait_condition.wait(&wait_mutex, 2);
-
-                wait_mutex.unlock();
+                Sleep(2);
 
                 display->image_mutex.lock();
                 display_initialized = (display->image != NULL);
@@ -243,15 +234,13 @@ void ZeitEngine::Play()
         ++sequence_iterator;
 
         if(timer.elapsed() > frame_timeframe) {
-            qDebug() << "[Lag] " + QString::number(timer.elapsed() - frame_timeframe) + "ms";
+            qDebug() << QString::number(timer.elapsed() - frame_timeframe) + "ms lag";
         } else {
-            qDebug() << "[Headroom] " + QString::number(frame_timeframe - timer.elapsed()) + "ms";
-            QThread::currentThread()->msleep(frame_timeframe - timer.elapsed());
+            Sleep(frame_timeframe - timer.elapsed());
         }
 
         if(preview_flag) {
             preview_flag = false;
-            qDebug() << "BREAKING BADLY";
             break;
         }
     }
@@ -776,4 +765,17 @@ void ZeitEngine::CloseExport()
     av_frame_free(&encoder_frame);
 
     exporter_initialized = false;
+}
+
+void ZeitEngine::Sleep(const unsigned int msec) {
+
+    QMutex wait_mutex;
+
+    wait_mutex.lock();
+
+    QWaitCondition wait_condition;
+    wait_condition.wait(&wait_mutex, msec);
+
+    wait_mutex.unlock();
+
 }
