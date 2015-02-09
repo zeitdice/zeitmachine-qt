@@ -221,29 +221,17 @@ void MainWindow::UncheckOtherFilters(QAction *action)
 
 void MainWindow::on_actionOpen_triggered()
 {
-    zeitengine->control_mutex.lock();
-    zeitengine->filter_flag = ZEIT_FILTER_NONE;
-    zeitengine->configured_framerate = ZEIT_RATE_24p;
-    zeitengine->loop_flag = false;
-    zeitengine->stop_flag = true;
-    zeitengine->control_mutex.unlock();
-
-    UncheckOtherFilters(NULL);
-
     QDir initial_dir(QCoreApplication::applicationDirPath());
 
     // Optional path correction for different operating systems
     #if defined(Q_OS_WIN)
 
     #elif defined(Q_OS_MAC)
-
-        if (initial_dir.dirName() == "MacOS")
-        {
+        if (initial_dir.dirName() == "MacOS") {
             initial_dir.cdUp();
             initial_dir.cdUp();
             initial_dir.cdUp();
         }
-
     #endif
 
     QString dir_name = QFileDialog::getExistingDirectory(this,
@@ -255,6 +243,8 @@ void MainWindow::on_actionOpen_triggered()
 
         QDir dir = QDir(dir_name);
 
+        // Filter all supported footage from the opened folder
+
         dir.setFilter(QDir::Files);
 
         QStringList image_extension_filters{"*.jpg","*.jpeg","*.png"};
@@ -262,12 +252,22 @@ void MainWindow::on_actionOpen_triggered()
 
         QFileInfoList files = dir.entryInfoList();
 
+        // Remove 0 byte images
+        for(auto files_iterator = files.begin(); files_iterator != files.end(); ++files_iterator) {
+            if((*files_iterator).size() == 0) {
+                files.removeAt(files_iterator - files.begin());
+            }
+        }
+
+        // Break and gracefully stop if there is no supported footage available now
         if(files.length() < 1) {
             QMessageBox::information(this,
                                      "No supported footage found",
                                      "Your chosen folder does not contain images, or does not contain any of a format that is supported (.jpg/.jpeg/.png).");
             return;
         }
+
+        // Naturally sort the images by filename
 
         QCollator collator;
         collator.setNumericMode(true);
@@ -277,8 +277,19 @@ void MainWindow::on_actionOpen_triggered()
             return collator.compare(a.baseName(), b.baseName()) < 0;
         });
 
+        // Stop all zeitengine activity and reset all flags
+        zeitengine->control_mutex.lock();
+        zeitengine->filter_flag = ZEIT_FILTER_NONE;
+        zeitengine->configured_framerate = ZEIT_RATE_24p;
+        zeitengine->loop_flag = false;
+        zeitengine->stop_flag = true;
+        zeitengine->control_mutex.unlock();
+
+        // Reflect the reset in the UI as well
+        UncheckOtherFilters(NULL);
+
+        // Send the list of files to the zeitengine
         emit LoadSignal(files);
-        //emit CacheSignal();
     }
 }
 
