@@ -4,6 +4,7 @@
 #include <QCollator>
 #include <QDir>
 #include <QFileDialog>
+#include <QMessageBox>
 #include <QMainWindow>
 #include <QProgressBar>
 #include <QSplashScreen>

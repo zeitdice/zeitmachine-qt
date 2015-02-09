@@ -260,11 +260,18 @@ void MainWindow::on_actionOpen_triggered()
         QStringList image_extension_filters{"*.jpg","*.jpeg","*.png"};
         dir.setNameFilters(image_extension_filters);
 
+        QFileInfoList files = dir.entryInfoList();
+
+        if(files.length() < 1) {
+            QMessageBox::information(this,
+                                     "No supported footage found",
+                                     "Your chosen folder does not contain images, or does not contain any of a format that is supported (.jpg/.jpeg/.png).");
+            return;
+        }
+
         QCollator collator;
         collator.setNumericMode(true);
         collator.setCaseSensitivity(Qt::CaseInsensitive);
-
-        QFileInfoList files = dir.entryInfoList();
 
         std::sort(files.begin(), files.end(), [&](const QFileInfo& a, const QFileInfo& b) {
             return collator.compare(a.baseName(), b.baseName()) < 0;
