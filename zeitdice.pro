@@ -33,13 +33,23 @@ FORMS    += \
 
 RESOURCES = zeitdice.qrc # menu icons and about image
 
-win64 {
+win {
 
     # Coming up as well
+
+    RC_ICONS = zeitdice.ico
 
 }
 
 mac {
+
+    ICON = zeitdice.icns
+
+    # In the .plist file, you can define some variables, e.g., @EXECUTABLE@,
+    # which qmake will replace with the actual executable name. Other variables
+    # include @ICON@, @TYPEINFO@, @LIBRARY@, and @SHORT_VERSION@.
+
+     QMAKE_INFO_PLIST = Info.plist
 
     # Preliminary non-generic build configuration on Michael's OS X
 
