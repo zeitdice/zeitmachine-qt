@@ -49,7 +49,7 @@ mac {
     # which qmake will replace with the actual executable name. Other variables
     # include @ICON@, @TYPEINFO@, @LIBRARY@, and @SHORT_VERSION@.
 
-     QMAKE_INFO_PLIST = Info.plist
+     #QMAKE_INFO_PLIST = Info.plist
 
     # Preliminary non-generic build configuration on Michael's OS X
 
