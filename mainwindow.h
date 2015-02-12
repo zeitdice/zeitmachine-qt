@@ -32,11 +32,16 @@ class MainWindow : public QMainWindow
     ZeitEngine *zeitengine;
     QThread engineThread;
 
+    QDir persistent_open_dir;
+
     /*!
      * \brief Disable other filter actions but the one passed on
      * \param The one single filter action that should not be disabled
      */
     void UncheckOtherFilters(QAction *action);
+
+    void InitializeZeitdiceDirectory();
+    void PersistZeitdiceDirectory(const QDir dir);
 
 public:
     explicit MainWindow(QWidget *parent = 0);

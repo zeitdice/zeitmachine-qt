@@ -20,6 +20,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     this->ui->actionSettings->setVisible(false);
 
+    InitializeZeitdiceDirectory();
+
     zeitengine = new ZeitEngine(videoWidget);
     zeitengine->moveToThread(&engineThread);
     engineThread.start();
@@ -44,6 +46,49 @@ MainWindow::~MainWindow()
     engineThread.quit();
     engineThread.wait();
     delete ui;
+}
+
+void MainWindow::InitializeZeitdiceDirectory()
+{
+    QFile file(".zeitdir");
+
+    if(file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+
+        if(!file.atEnd()) {
+            QByteArray path_bytes = file.readAll();
+            QString path_string = QString(path_bytes);
+            persistent_open_dir = QDir(path_string);
+        }
+
+        file.close();
+    } else {
+
+        persistent_open_dir = QDir(QCoreApplication::applicationDirPath());
+
+        // Optional path correction for different operating systems
+        #if defined(Q_OS_WIN)
+
+        #elif defined(Q_OS_MAC)
+            if (persistent_open_dir.dirName() == "MacOS") {
+                persistent_open_dir.cdUp();
+                persistent_open_dir.cdUp();
+                persistent_open_dir.cdUp();
+            }
+        #endif
+
+        PersistZeitdiceDirectory(persistent_open_dir);
+    }
+}
+
+void MainWindow::PersistZeitdiceDirectory(const QDir dir) {
+    QFile file(".zeitdir");
+
+    if(file.open(QIODevice::WriteOnly)) {
+        QByteArray dir_bytearray = dir.absolutePath().toUtf8();
+        file.write(dir_bytearray);
+    }
+
+    file.close();
 }
 
 void MainWindow::UpdateMessage(const QString text)
@@ -253,25 +298,16 @@ void MainWindow::UncheckOtherFilters(QAction *action)
 
 void MainWindow::on_actionOpen_triggered()
 {
-    QDir initial_dir(QCoreApplication::applicationDirPath());
-
-    // Optional path correction for different operating systems
-    #if defined(Q_OS_WIN)
-
-    #elif defined(Q_OS_MAC)
-        if (initial_dir.dirName() == "MacOS") {
-            initial_dir.cdUp();
-            initial_dir.cdUp();
-            initial_dir.cdUp();
-        }
-    #endif
-
     QString dir_name = QFileDialog::getExistingDirectory(this,
                                                          "Open Footage Folder",
-                                                         initial_dir.absolutePath(),
+                                                         persistent_open_dir.absolutePath(),
                                                          QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks );
 
     if(!dir_name.isEmpty()) {
+
+        persistent_open_dir = QDir(dir_name);
+        persistent_open_dir.cdUp();
+        PersistZeitdiceDirectory(persistent_open_dir);
 
         QDir dir = QDir(dir_name);
 
