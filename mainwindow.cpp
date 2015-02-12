@@ -18,6 +18,8 @@ MainWindow::MainWindow(QWidget *parent) :
     progressbar->hide();
     ui->statusbar->addPermanentWidget(progressbar, 100);
 
+    this->ui->actionSettings->setVisible(false);
+
     zeitengine = new ZeitEngine(videoWidget);
     zeitengine->moveToThread(&engineThread);
     engineThread.start();
@@ -26,11 +28,13 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(zeitengine, &ZeitEngine::VideoUpdated, videoWidget, &GLVideoWidget::DelegateUpdate);
     connect(zeitengine, &ZeitEngine::VideoConfigurationUpdated, videoWidget, &GLVideoWidget::ConfigureVideo);
+    connect(zeitengine, &ZeitEngine::ControlsEnabled, this, &MainWindow::EnableControls);
     connect(zeitengine, &ZeitEngine::MessageUpdated, this, &MainWindow::UpdateMessage);
     connect(zeitengine, &ZeitEngine::ProgressUpdated, this, &MainWindow::UpdateProgress);
 
     connect(this, &MainWindow::LoadSignal, zeitengine, &ZeitEngine::Load);
     connect(this, &MainWindow::CacheSignal, zeitengine, &ZeitEngine::Cache);
+    connect(this, &MainWindow::RefreshSignal, zeitengine, &ZeitEngine::Refresh);
     connect(this, &MainWindow::PlaySignal, zeitengine, &ZeitEngine::Play);
     connect(this, &MainWindow::ExportSignal, zeitengine, &ZeitEngine::Export);
 }
@@ -164,6 +168,8 @@ void MainWindow::on_actionVignette_triggered(bool checked)
     zeitengine->control_mutex.unlock();
 
     UncheckOtherFilters(this->ui->actionVignette);
+
+    RefreshSignal();
 }
 
 void MainWindow::on_actionBlackWhite_triggered(bool checked)
@@ -173,6 +179,8 @@ void MainWindow::on_actionBlackWhite_triggered(bool checked)
     zeitengine->control_mutex.unlock();
 
     UncheckOtherFilters(this->ui->actionBlackWhite);
+
+    RefreshSignal();
 }
 
 void MainWindow::on_actionSepia_triggered(bool checked)
@@ -182,6 +190,8 @@ void MainWindow::on_actionSepia_triggered(bool checked)
     zeitengine->control_mutex.unlock();
 
     UncheckOtherFilters(this->ui->actionSepia);
+
+    RefreshSignal();
 }
 
 void MainWindow::on_actionHipstagram_triggered(bool checked)
@@ -191,6 +201,22 @@ void MainWindow::on_actionHipstagram_triggered(bool checked)
     zeitengine->control_mutex.unlock();
 
     UncheckOtherFilters(this->ui->actionHipstagram);
+
+    RefreshSignal();
+}
+
+void MainWindow::EnableControls(const bool lock) {
+    this->ui->actionOpen->setEnabled(lock);
+    this->ui->actionPlay->setEnabled(lock);
+    this->ui->actionLoop->setEnabled(lock);
+    this->ui->actionStop->setEnabled(lock);
+    this->ui->actionCycleFramerates->setEnabled(lock);
+    this->ui->actionFlipVertically->setEnabled(lock);
+    this->ui->actionVignette->setEnabled(lock);
+    this->ui->actionBlackWhite->setEnabled(lock);
+    this->ui->actionSepia->setEnabled(lock);
+    this->ui->actionHipstagram->setEnabled(lock);
+    this->ui->actionMovie->setEnabled(lock);
 }
 
 void MainWindow::on_actionMovie_triggered()
@@ -201,6 +227,9 @@ void MainWindow::on_actionMovie_triggered()
                                                                QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks );
 
     if(!footage_folder.isEmpty()) {
+
+        EnableControls(false);
+
         zeitengine->control_mutex.lock();
         zeitengine->stop_flag = true;
         zeitengine->control_mutex.unlock();
@@ -301,4 +330,6 @@ void MainWindow::on_actionFlipVertically_triggered()
     zeitengine->control_mutex.lock();
     zeitengine->vertical_flip_flag = !zeitengine->vertical_flip_flag;
     zeitengine->control_mutex.unlock();
+
+    RefreshSignal();
 }

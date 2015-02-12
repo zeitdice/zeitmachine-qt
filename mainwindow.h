@@ -44,9 +44,11 @@ public:
 signals:
     void LoadSignal(const QFileInfoList& sequence);
     void CacheSignal();
+    void RefreshSignal();
     void PlaySignal();
     void ExportSignal(const QFileInfo file);
 public slots:
+    void EnableControls(const bool lock);
     void UpdateMessage(const QString text);
     void UpdateProgress(const QString text, const int current, const int total);
 private slots:

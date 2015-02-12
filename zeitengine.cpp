@@ -111,6 +111,12 @@ void ZeitEngine::Load(const QFileInfoList& sequence)
 
     InitDecoder();
 
+    Refresh();
+
+}
+
+void ZeitEngine::Refresh()
+{
     preview_flag = true;
 
     control_mutex.lock();
@@ -767,6 +773,8 @@ void ZeitEngine::CloseExport()
     av_frame_free(&encoder_frame);
 
     exporter_initialized = false;
+
+    ControlsEnabled(true);
 }
 
 void ZeitEngine::Sleep(const unsigned int msec) {

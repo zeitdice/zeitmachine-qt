@@ -327,6 +327,7 @@ public:
 signals:
     void VideoConfigurationUpdated(const unsigned int width, const unsigned int height, const QImage::Format pixel_format);
     void VideoUpdated();
+    void ControlsEnabled(const bool lock);
     void MessageUpdated(const QString text);
     void ProgressUpdated(const QString text, const int current, const int total);
 public slots:
@@ -344,6 +345,13 @@ public slots:
      * Decodes and cheaply re-encodes all frames to the in-memory video cache
      */
     void Cache();
+
+    /*!
+     * \brief Request a refresh
+     *
+     * Refresh (single frame playback) after flipping/filtering during non-playback
+     */
+    void Refresh();
 
     /*!
      * \brief Start continuous playback, adhering to loop_flag and stop_flag
