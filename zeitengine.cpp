@@ -144,7 +144,9 @@ void ZeitEngine::Play()
 {
     sequence_iterator = source_sequence.constBegin();
 
-    emit MessageUpdated("Playback started");
+    if(!preview_flag) {
+        emit MessageUpdated("Playback started");
+    }
 
     while(true) {
         float frame_timeframe;
