@@ -201,7 +201,10 @@ void MainWindow::on_actionMovie_triggered()
                                                                QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks );
 
     if(!footage_folder.isEmpty()) {
-        qDebug() << QFileInfo(footage_folder, "zeitdice-export.h264").absoluteFilePath();
+        zeitengine->control_mutex.lock();
+        zeitengine->stop_flag = true;
+        zeitengine->control_mutex.unlock();
+
         emit ExportSignal(QFileInfo(footage_folder, "zeitdice-export.h264"));
     }
 }
