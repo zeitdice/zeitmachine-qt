@@ -139,6 +139,12 @@ class ZeitEngine : public QObject
     AVFrame* scaler_frame;
     bool scaler_initialized;
 
+    // Rescaler members
+
+    SwsContext *rescaler_context;
+    AVFrame* rescaler_frame;
+    bool rescaler_initialized;
+
     // Play members
 
     QFileInfoList::const_iterator sequence_iterator;
@@ -243,6 +249,46 @@ class ZeitEngine : public QObject
      * Free all allocated scaler members
      */
     void FreeScaler();
+
+    /*!
+     * \brief Initialise the rescaler
+     * \param Reference source frame to rescale from
+     * \param target_width Target frame width
+     * \param target_height Target frame height
+     * \param target_pixel_format Target frame pixel format
+     * \sa RescaleFrame
+     *
+     * Don't call this yourself, `RescaleFrame()` automatically calls this the
+     * first time you use it for scaling. (But do call `FreeRescaler()` as soon
+     * as the function you use scaling in finishes to free everything again!)
+     */
+    void InitRescaler(AVFrame *frame,
+                      const unsigned int target_width,
+                      const unsigned int target_height,
+                      const AVPixelFormat target_pixel_format);
+
+    /*!
+     * \brief Rescale the currently loaded decoder frame
+     * \param Reference source frame to rescale from
+     * \param target_width Target frame width
+     * \param target_height Target frame height
+     * \param target_pixel_format Target frame pixel format
+     *
+     * Provide your source frame and the target format, rescaling results go into
+     * rescaler_frame! Use `FreeRescaler()` to clean up after your function that
+     * uses rescaling.
+     */
+    void RescaleFrame(AVFrame *frame,
+                      const unsigned int target_width,
+                      const unsigned int target_height,
+                      const AVPixelFormat target_pixel_format);
+
+    /*!
+     * \brief Free all allocated rescaler members
+     *
+     * Free all allocated rescaler members
+     */
+    void FreeRescaler();
 
     /*!
      * \brief Initalize the encoder

@@ -29,6 +29,10 @@ ZeitEngine::ZeitEngine(GLVideoWidget* video_widget, QObject *parent) :
     scaler_frame = NULL;
     scaler_initialized = false;
 
+    rescaler_context = NULL;
+    rescaler_frame = NULL;
+    rescaler_initialized = false;
+
     configured_filter = ZEIT_FILTER_NONE;
     filter_initialized = false;
 
@@ -49,6 +53,7 @@ ZeitEngine::~ZeitEngine()
     FreeScaler();
     FreeFilter();
     FreeFilterData();
+    FreeRescaler();
 }
 
 void ZeitEngine::InitDecoder()
@@ -106,6 +111,7 @@ void ZeitEngine::Load(const QFileInfoList& sequence)
     FreeScaler();
     FreeFilter();
     FreeFilterData();
+    FreeRescaler();
 
     source_sequence = sequence;
 
@@ -261,7 +267,7 @@ void ZeitEngine::Export(const QFileInfo file)
 {
     for(sequence_iterator = source_sequence.constBegin(); sequence_iterator != source_sequence.constEnd(); ++sequence_iterator)
     {
-        emit ProgressUpdated("Exporting sequence", sequence_iterator - source_sequence.constBegin(), source_sequence.size());
+        emit ProgressUpdated("Encoding sequence", sequence_iterator - source_sequence.constBegin(), source_sequence.size());
 
         control_mutex.lock();
         ZeitFilter filter = filter_flag;
@@ -276,20 +282,26 @@ void ZeitEngine::Export(const QFileInfo file)
 
         if(filter != ZEIT_FILTER_NONE) {
             FilterFrame(scaler_frame, filter);
-            ExportFrame(filter_frame, file);
+            RescaleFrame(filter_frame,
+                         filter_frame->width,
+                         filter_frame->height,
+                         EXPORT_PIXELFORMAT);
+            ExportFrame(rescaler_frame, file);
             FreeFilterData();
         } else {
             ExportFrame(scaler_frame, file);
         }
     }
 
-    emit ProgressUpdated("Export complete", source_sequence.size(), source_sequence.size());
-    emit MessageUpdated("Export complete");
+    emit ProgressUpdated("Encoding complete", source_sequence.size(), source_sequence.size());
+    emit MessageUpdated("Encoding complete, finishing up export ...");
 
     CloseExport();
     FreeFilter();
     FreeScaler();
+    FreeRescaler();
 
+    emit MessageUpdated("Export complete");
 }
 
 void ZeitEngine::DecodeFrame()
@@ -625,6 +637,111 @@ void ZeitEngine::FreeScaler()
         av_frame_free(&scaler_frame);
 
         scaler_initialized = false;
+    }
+}
+
+void ZeitEngine::InitRescaler(AVFrame *frame,
+                              const unsigned int target_width,
+                              const unsigned int target_height,
+                              const AVPixelFormat target_pixel_format)
+{
+    int ret;
+
+    try
+    {
+        if( !(rescaler_context = sws_getContext(frame->width,
+                                                frame->height,
+                                                (AVPixelFormat)frame->format,
+                                                target_width,
+                                                target_height,
+                                                target_pixel_format,
+                                                SWS_BILINEAR,
+                                                NULL,
+                                                NULL,
+                                                NULL)) )
+        {
+            av_log(NULL, AV_LOG_ERROR,
+            "Impossible to create scale context for the conversion "
+            "fmt:%s s:%dx%d -> fmt:%s s:%dx%d\n",
+            av_get_pix_fmt_name((AVPixelFormat)frame->format), frame->width, frame->height,
+            av_get_pix_fmt_name(target_pixel_format), target_width, target_height);
+            ret = AVERROR(EINVAL);
+            throw(ret);
+        }
+
+        // Allocate scaler frame
+        if( !(rescaler_frame = av_frame_alloc()) ) {
+            av_log(NULL, AV_LOG_ERROR, "Failed to allocate scaler frame\n");
+            ret = AVERROR(ENOMEM);
+            throw(ret);
+        }
+
+        av_frame_copy_props(rescaler_frame, frame);
+        rescaler_frame->width = target_width;
+        rescaler_frame->height = target_height;
+        rescaler_frame->format = target_pixel_format;
+
+        // Alignment has to be 32 because QImage needs it that way - But we don't always write to QImage - Keep an eye on this
+        if( av_image_alloc(rescaler_frame->data,
+                           rescaler_frame->linesize,
+                           rescaler_frame->width,
+                           rescaler_frame->height,
+                           (AVPixelFormat)rescaler_frame->format,
+                           32) < 0 ) {
+            fprintf(stderr, "Could not allocate scaler picture\n");
+            exit(1);
+        }
+
+        // Buffer is going to be written to rawvideo file, no alignment <-- hm!
+        //        if ((ret = av_image_alloc(scaler_data,
+        //                                  scaler_linesize,
+        //                                  target_width,
+        //                                  target_height,
+        //                                  target_pixel_format,
+        //                                  1)) < 0)
+        //        {
+        //            fprintf(stderr, "Could not allocate destination image\n");
+        //            throw(ret);
+        //        }
+
+        rescaler_initialized = true;
+    }
+    catch(int code)
+    {
+        av_log(NULL, AV_LOG_ERROR, "Return code was " + code);
+        return;
+    }
+}
+
+void ZeitEngine::RescaleFrame(AVFrame *frame,
+                              const unsigned int target_width,
+                              const unsigned int target_height,
+                              const AVPixelFormat target_pixel_format)
+{
+    if(!rescaler_initialized) {
+        InitRescaler(frame,
+                     target_width,
+                     target_height,
+                     target_pixel_format);
+    }
+
+    sws_scale(rescaler_context,
+              (const uint8_t * const*)frame,
+              frame->linesize,
+              0,
+              frame->height,
+              rescaler_frame->data,
+              rescaler_frame->linesize);
+}
+
+void ZeitEngine::FreeRescaler()
+{
+    if(rescaler_initialized) {
+        sws_freeContext(rescaler_context);
+        av_freep(&rescaler_frame->data[0]);
+        av_frame_free(&rescaler_frame);
+
+        rescaler_initialized = false;
     }
 }
 
