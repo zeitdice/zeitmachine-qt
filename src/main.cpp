@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include <QApplication>
 #include <QtPlugin>
+#include <QScreen>
 
 
 // Statically include platform plugin

@@ -14,22 +14,19 @@ VERSION = 0.1.0
 
 CONFIG += c++11
 
-HEADERS  += \
-    glvideowidget.h \
-    mainwindow.h \
-    zeitengine.h \
-    settingsdialog.h
+HEADERS  += src/glvideowidget.h \
+            src/mainwindow.h \
+            src/zeitengine.h \
+            src/settingsdialog.h
 
-SOURCES += \
-    main.cpp \
-    glvideowidget.cpp \
-    mainwindow.cpp \
-    zeitengine.cpp \
-    settingsdialog.cpp
+SOURCES +=  src/main.cpp \
+            src/glvideowidget.cpp \
+            src/mainwindow.cpp \
+            src/zeitengine.cpp \
+            src/settingsdialog.cpp
 
-FORMS    += \
-    mainwindow.ui \
-    settingsdialog.ui
+FORMS    += forms/mainwindow.ui \
+            forms/settingsdialog.ui
 
 RESOURCES = zeitdice.qrc # menu icons and about image
 

@@ -6,15 +6,22 @@ ZeitEngine::ZeitEngine(GLVideoWidget* video_widget, QObject *parent) :
     static bool avglobals_initialized = false;
 
     if(!avglobals_initialized) {
-        avcodec_register_all();
-        avfilter_register_all();
-        av_register_all();
+        avcodec_register_all(); // probably redundant
+        avfilter_register_all(); // probably redundant
+        av_register_all(); // probably takes care of the two preceding lines
 
         avglobals_initialized = true;
     }
 
+    QScreen* screen = QApplication::primaryScreen();
+
+    display_refresh_rate = screen->refreshRate();
+    display_safe_max_width = screen->availableSize().width() - 200;
+    display_safe_max_height = screen->availableSize().height() - 200;
     display = video_widget;
     display_initialized = false;
+
+    qDebug() << "Safe screen area is" << display_safe_max_width << "x" << display_safe_max_height;
 
     configured_framerate = ZEIT_RATE_24p;
 
@@ -198,15 +205,19 @@ void ZeitEngine::Play()
         DecodeFrame();
 
         if(!display_initialized) {
+
             display_width = decoder_frame->width;
             display_height = decoder_frame->height;
 
-            if(display_width > DISPLAY_MAX_WIDTH) {
-                display_height = (float)display_height * ((float)DISPLAY_MAX_WIDTH / (float)display_width);
-                display_width = DISPLAY_MAX_WIDTH;
-            } else if(display_height > DISPLAY_MAX_HEIGHT) {
-                display_width = (float)display_width * ((float)DISPLAY_MAX_HEIGHT / (float)display_height);
-                display_height = DISPLAY_MAX_HEIGHT;
+            //display_width = (float)decoder_frame->width / 3.0f;
+            //display_height = (float)decoder_frame->height / 3.0f;
+
+            if(display_width > display_safe_max_width) {
+                display_height = (float)display_height * ((float)display_safe_max_width / (float)display_width);
+                display_width = display_safe_max_width;
+            } else if(display_height > display_safe_max_height) {
+                display_width = (float)display_width * ((float)display_safe_max_height / (float)display_height);
+                display_height = display_safe_max_height;
             }
 
             emit VideoConfigurationUpdated(display_width, display_height, DISPLAY_QT_PIXEL_FORMAT);
@@ -232,12 +243,23 @@ void ZeitEngine::Play()
             FilterFrame(scaler_frame, filter);
         }
 
+        control_mutex.lock();
+        bool flip = vertical_flip_flag;
+        control_mutex.unlock();
+
         display->image_mutex.lock();
         if(filter != ZEIT_FILTER_NONE) {
-            memcpy(display->image->bits(), filter_frame->data[0], filter_frame->linesize[0] * filter_frame->height);
-
+            for(int y = 0; y < filter_frame->height; y++) {
+                memcpy(display->image->scanLine(flip ? filter_frame->height - 1 - y : y),
+                       filter_frame->data[0] + y*filter_frame->linesize[0],
+                       filter_frame->width*3);
+            }
         } else {
-            memcpy(display->image->bits(), scaler_frame->data[0], scaler_frame->linesize[0] * scaler_frame->height);
+            for(int y = 0; y < scaler_frame->height; y++) {
+                memcpy(display->image->scanLine(flip ? scaler_frame->height - 1 - y : y),
+                       scaler_frame->data[0] + y*scaler_frame->linesize[0],
+                       scaler_frame->width*3);
+            }
         }
         display->image_mutex.unlock();
 
@@ -567,6 +589,8 @@ void ZeitEngine::InitScaler(AVFrame *frame,
         scaler_frame->height = target_height;
         scaler_frame->format = target_pixel_format;
 
+        qDebug() << "Init scaler with target:" << scaler_frame->width << "x" << scaler_frame->height << " format: " << scaler_frame->format << "linesize: " << scaler_frame->linesize[0];
+
         // Alignment has to be 32 because QImage needs it that way - But we don't always write to QImage - Keep an eye on this
         if( av_image_alloc(scaler_frame->data,
                            scaler_frame->linesize,
@@ -577,6 +601,8 @@ void ZeitEngine::InitScaler(AVFrame *frame,
             fprintf(stderr, "Could not allocate scaler picture\n");
             exit(1);
         }
+
+        qDebug() << "Inited scaler with target:" << scaler_frame->width << "x" << scaler_frame->height << " format: " << scaler_frame->format << "linesize: " << scaler_frame->linesize[0];
 
         // Buffer is going to be written to rawvideo file, no alignment <-- hm!
         //        if ((ret = av_image_alloc(scaler_data,
@@ -611,22 +637,39 @@ void ZeitEngine::ScaleFrame(AVFrame *frame,
                    target_pixel_format);
     }
 
-    control_mutex.lock();
-    if(vertical_flip_flag) {
-        for(int i = 0; i < 4; i++) {
-            frame->data[i] += frame->linesize[i] * (frame->height-1);
-            frame->linesize[i] = -frame->linesize[i];
-        }
-    }
-    control_mutex.unlock();
+//    control_mutex.lock();
+//    if(vertical_flip_flag) {
+//        for(int i = 0; i < 4; i++) {
+//            frame->data[i] += frame->linesize[i] * (frame->height-1);
+//            frame->linesize[i] = -frame->linesize[i];
+//        }
+//    }
+//    control_mutex.unlock();
+
+    qDebug() << "Sourceframe before scaling";
+    qDebug() << "TARGET_WIDTH" << frame->width;
+    qDebug() << "TARGET_HEIGHT" << frame->height;
+    qDebug() << "LINESIZE[0]" << frame->linesize[0];
+    qDebug() << "LINESIZE[1]" << frame->linesize[1];
+    qDebug() << "LINESIZE[2]" << frame->linesize[2];
+
+    qDebug() << (const uint8_t * const*)frame;
+    qDebug() << (const uint8_t * const*)frame->data;
 
     sws_scale(scaler_context,
-              (const uint8_t * const*)frame,
+              (const uint8_t * const*)frame->data,
               frame->linesize,
               0,
               frame->height,
               scaler_frame->data,
               scaler_frame->linesize);
+
+    qDebug() << "Targetframe after scaling";
+    qDebug() << "TARGET_WIDTH" << target_width;
+    qDebug() << "TARGET_HEIGHT" << target_height;
+    qDebug() << "LINESIZE[0]" << scaler_frame->linesize[0];
+    qDebug() << "LINESIZE[1]" << scaler_frame->linesize[1];
+    qDebug() << "LINESIZE[2]" << scaler_frame->linesize[2];
 }
 
 void ZeitEngine::FreeScaler()
@@ -726,7 +769,7 @@ void ZeitEngine::RescaleFrame(AVFrame *frame,
     }
 
     sws_scale(rescaler_context,
-              (const uint8_t * const*)frame,
+              (const uint8_t * const*)frame->data,
               frame->linesize,
               0,
               frame->height,
@@ -830,20 +873,41 @@ void ZeitEngine::ExportFrame(AVFrame* frame, const QFileInfo output_file)
     encoder_packet->data = NULL; // Packet data will be allocated by the encoder
     encoder_packet->size = 0;
 
+    control_mutex.lock();
+    bool flip = vertical_flip_flag;
+    control_mutex.unlock();
+
     // Y
-    for(int y = 0; y < encoder_codec_context->height; y++) {
-        for(int x = 0; x < encoder_codec_context->width; x++) {
-            encoder_frame->data[0][y * encoder_frame->linesize[0] + x] = frame->data[0][y * frame->linesize[0] + x];
-        }
+    for(int y = 0; y < frame->height; y++) {
+        memcpy(encoder_frame->data[0] + (flip ? encoder_frame->height - 1 - y : y) * encoder_frame->linesize[0],
+               frame->data[0] + y * frame->linesize[0],
+               frame->width*3);
     }
 
     // Cb and Cr
-    for(int y = 0; y < encoder_codec_context->height / 2; y++) {
-        for(int x = 0; x < encoder_codec_context->width / 2; x++) {
-            encoder_frame->data[1][y * encoder_frame->linesize[1] + x] = frame->data[1][y * frame->linesize[1] + x] ;
-            encoder_frame->data[2][y * encoder_frame->linesize[2] + x] = frame->data[2][y * frame->linesize[2] + x];
-        }
+    for(int y = 0; y < frame->height / 2; y++) {
+        memcpy(encoder_frame->data[1] + (flip ? encoder_frame->height / 2 - 1 - y : y) * encoder_frame->linesize[1],
+               frame->data[1] + y * frame->linesize[1],
+               encoder_frame->linesize[1]);
+        memcpy(encoder_frame->data[2] + (flip ? encoder_frame->height / 2 - 1 - y : y) * encoder_frame->linesize[2],
+               frame->data[2] + y * frame->linesize[2],
+               encoder_frame->linesize[2]);
     }
+
+//    // Y
+//    for(int y = 0; y < encoder_codec_context->height; y++) {
+//        for(int x = 0; x < encoder_codec_context->width; x++) {
+//            encoder_frame->data[0][y * encoder_frame->linesize[0] + x] = frame->data[0][y * frame->linesize[0] + x];
+//        }
+//    }
+
+//    // Cb and Cr
+//    for(int y = 0; y < encoder_codec_context->height / 2; y++) {
+//        for(int x = 0; x < encoder_codec_context->width / 2; x++) {
+//            encoder_frame->data[1][y * encoder_frame->linesize[1] + x] = frame->data[1][y * frame->linesize[1] + x] ;
+//            encoder_frame->data[2][y * encoder_frame->linesize[2] + x] = frame->data[2][y * frame->linesize[2] + x];
+//        }
+//    }
 
     encoder_frame->pts = sequence_iterator - source_sequence.constBegin();
 

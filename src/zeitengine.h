@@ -6,12 +6,14 @@
  * Declares the `ZeitEngine` class and `ZeitFilter` and `ZeitRate` enums
  */
 
+#include <QApplication>
 #include <QObject>
 #include <QDebug>
 #include <QElapsedTimer>
 #include <QFileInfoList>
 #include <QImage>
 #include <QMutex>
+#include <QScreen>
 #include <QString>
 #include <QThread>
 #include <QWaitCondition>
@@ -74,8 +76,6 @@ class ZeitEngine : public QObject
 
     QElapsedTimer timer;
 
-    const static unsigned int DISPLAY_MAX_WIDTH = 960;
-    const static unsigned int DISPLAY_MAX_HEIGHT = 540;
     const static AVPixelFormat DISPLAY_AV_PIXEL_FORMAT = AV_PIX_FMT_RGB24;
     const static QImage::Format DISPLAY_QT_PIXEL_FORMAT = QImage::Format_RGB888;
 
@@ -92,6 +92,9 @@ class ZeitEngine : public QObject
 
     GLVideoWidget* display;
 
+    unsigned int display_refresh_rate;
+    unsigned int display_safe_max_width;
+    unsigned int display_safe_max_height;
     unsigned int display_width;
     unsigned int display_height;
     bool display_initialized;    //!< Flag to check for display being initialized
