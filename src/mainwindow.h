@@ -13,6 +13,7 @@
 #include "settingsdialog.h"
 #include "glvideowidget.h"
 #include "zeitengine.h"
+#include "version.h"
 
 namespace Ui {
 class MainWindow;

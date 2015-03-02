@@ -17,7 +17,8 @@ CONFIG += c++11
 HEADERS  += src/glvideowidget.h \
             src/mainwindow.h \
             src/zeitengine.h \
-            src/settingsdialog.h
+            src/settingsdialog.h \
+            src/version.h
 
 SOURCES +=  src/main.cpp \
             src/glvideowidget.cpp \

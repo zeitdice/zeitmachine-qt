@@ -202,6 +202,12 @@ void MainWindow::on_actionCycleFramerates_triggered()
 void MainWindow::on_actionAbout_triggered()
 {
     QPixmap *pixmap = new QPixmap(":/about/splash.png");
+
+    QPainter *painter = new QPainter(pixmap);
+    painter->setPen(Qt::black);
+    painter->setFont(QFont("Arial", 18));
+    painter->drawText(14, 32, ZEITDICE_APPLICATION_VERSION);
+
     QSplashScreen *splash = new QSplashScreen(*pixmap);
     splash->show();
 }
