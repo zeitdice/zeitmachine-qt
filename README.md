@@ -2,6 +2,15 @@
 
 Qt 5.4.1 / FFmpeg / x264
 
+# Build Notes Mac
+
+- Build-> Clean All
+- Build->Run gmake
+- In build....-Release folder, edit makefile: LIBS = .... line, take out all -framework Qt* entries
+- Run make in release folder
+
+
+
 ### Future development notes
 
 - Rendering pipeline long term perspective
