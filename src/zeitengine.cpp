@@ -209,15 +209,18 @@ void ZeitEngine::Play()
             display_width = decoder_frame->width;
             display_height = decoder_frame->height;
 
-            //display_width = (float)decoder_frame->width / 3.0f;
-            //display_height = (float)decoder_frame->height / 3.0f;
+            // Fit display resolution into available screen space
+            while(display_width > display_safe_max_width || display_height > display_safe_max_height) {
 
-            if(display_width > display_safe_max_width) {
-                display_height = (float)display_height * ((float)display_safe_max_width / (float)display_width);
-                display_width = display_safe_max_width;
-            } else if(display_height > display_safe_max_height) {
-                display_width = (float)display_width * ((float)display_safe_max_height / (float)display_height);
-                display_height = display_safe_max_height;
+                if(display_width > display_safe_max_width) {
+                    display_height = (float)display_height * ((float)display_safe_max_width / (float)display_width);
+                    display_width = display_safe_max_width;
+                }
+
+                if(display_height > display_safe_max_height) {
+                    display_width = (float)display_width * ((float)display_safe_max_height / (float)display_height);
+                    display_height = display_safe_max_height;
+                }
             }
 
             emit VideoConfigurationUpdated(display_width, display_height, DISPLAY_QT_PIXEL_FORMAT);
