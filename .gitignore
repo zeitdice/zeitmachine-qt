@@ -1,6 +1,9 @@
-# User-specific Qt project settings
+# Ignore user-specific Qt project settings
 *.pro.user*
 
-# Documentation folders generated with Doxygen
+# Ignore dependencies obtained with the platform build scripts
+deps/
+
+# Ignore documentation folders generated with Doxygen
 html/
 latex/
