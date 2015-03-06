@@ -14,10 +14,9 @@ Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
 Q_IMPORT_PLUGIN(QCocoaIntegrationPlugin)
 #endif
 
-#if defined(Q_OS_LINUX)
+#if defined(Q_OS_LINUX) && defined(Q_NO_DEBUG)
 Q_IMPORT_PLUGIN(QXcbIntegrationPlugin)
 #endif
-
 
 int main(int argc, char *argv[])
 {

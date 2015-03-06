@@ -21,7 +21,7 @@ ZeitEngine::ZeitEngine(GLVideoWidget* video_widget, QObject *parent) :
     display = video_widget;
     display_initialized = false;
 
-    qDebug() << "Safe screen area is" << display_safe_max_width << "x" << display_safe_max_height;
+//    qDebug() << "Safe screen area is" << display_safe_max_width << "x" << display_safe_max_height;
 
     configured_framerate = ZEIT_RATE_24p;
 
@@ -273,7 +273,7 @@ void ZeitEngine::Play()
         ++sequence_iterator;
 
         if(timer.elapsed() > frame_timeframe) {
-            qDebug() << QString::number(timer.elapsed() - frame_timeframe) + "ms lag";
+//            qDebug() << QString::number(timer.elapsed() - frame_timeframe) + "ms lag";
         } else {
             Sleep(frame_timeframe - timer.elapsed());
         }
@@ -592,7 +592,7 @@ void ZeitEngine::InitScaler(AVFrame *frame,
         scaler_frame->height = target_height;
         scaler_frame->format = target_pixel_format;
 
-        qDebug() << "Init scaler with target:" << scaler_frame->width << "x" << scaler_frame->height << " format: " << scaler_frame->format << "linesize: " << scaler_frame->linesize[0];
+//        qDebug() << "Init scaler with target:" << scaler_frame->width << "x" << scaler_frame->height << " format: " << scaler_frame->format << "linesize: " << scaler_frame->linesize[0];
 
         // Alignment has to be 32 because QImage needs it that way - But we don't always write to QImage - Keep an eye on this
         if( av_image_alloc(scaler_frame->data,
@@ -605,7 +605,7 @@ void ZeitEngine::InitScaler(AVFrame *frame,
             exit(1);
         }
 
-        qDebug() << "Inited scaler with target:" << scaler_frame->width << "x" << scaler_frame->height << " format: " << scaler_frame->format << "linesize: " << scaler_frame->linesize[0];
+//        qDebug() << "Inited scaler with target:" << scaler_frame->width << "x" << scaler_frame->height << " format: " << scaler_frame->format << "linesize: " << scaler_frame->linesize[0];
 
         // Buffer is going to be written to rawvideo file, no alignment <-- hm!
         //        if ((ret = av_image_alloc(scaler_data,
@@ -649,15 +649,15 @@ void ZeitEngine::ScaleFrame(AVFrame *frame,
 //    }
 //    control_mutex.unlock();
 
-    qDebug() << "Sourceframe before scaling";
-    qDebug() << "TARGET_WIDTH" << frame->width;
-    qDebug() << "TARGET_HEIGHT" << frame->height;
-    qDebug() << "LINESIZE[0]" << frame->linesize[0];
-    qDebug() << "LINESIZE[1]" << frame->linesize[1];
-    qDebug() << "LINESIZE[2]" << frame->linesize[2];
+//    qDebug() << "Sourceframe before scaling";
+//    qDebug() << "TARGET_WIDTH" << frame->width;
+//    qDebug() << "TARGET_HEIGHT" << frame->height;
+//    qDebug() << "LINESIZE[0]" << frame->linesize[0];
+//    qDebug() << "LINESIZE[1]" << frame->linesize[1];
+//    qDebug() << "LINESIZE[2]" << frame->linesize[2];
 
-    qDebug() << (const uint8_t * const*)frame;
-    qDebug() << (const uint8_t * const*)frame->data;
+//    qDebug() << (const uint8_t * const*)frame;
+//    qDebug() << (const uint8_t * const*)frame->data;
 
     sws_scale(scaler_context,
               (const uint8_t * const*)frame->data,
@@ -667,12 +667,12 @@ void ZeitEngine::ScaleFrame(AVFrame *frame,
               scaler_frame->data,
               scaler_frame->linesize);
 
-    qDebug() << "Targetframe after scaling";
-    qDebug() << "TARGET_WIDTH" << target_width;
-    qDebug() << "TARGET_HEIGHT" << target_height;
-    qDebug() << "LINESIZE[0]" << scaler_frame->linesize[0];
-    qDebug() << "LINESIZE[1]" << scaler_frame->linesize[1];
-    qDebug() << "LINESIZE[2]" << scaler_frame->linesize[2];
+//    qDebug() << "Targetframe after scaling";
+//    qDebug() << "TARGET_WIDTH" << target_width;
+//    qDebug() << "TARGET_HEIGHT" << target_height;
+//    qDebug() << "LINESIZE[0]" << scaler_frame->linesize[0];
+//    qDebug() << "LINESIZE[1]" << scaler_frame->linesize[1];
+//    qDebug() << "LINESIZE[2]" << scaler_frame->linesize[2];
 }
 
 void ZeitEngine::FreeScaler()
