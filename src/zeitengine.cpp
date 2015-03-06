@@ -51,6 +51,8 @@ ZeitEngine::ZeitEngine(GLVideoWidget* video_widget, QObject *parent) :
 
     preview_flag = false;
 
+    vertical_flip_flag = true;
+
     exporter_initialized = false;
 }
 
