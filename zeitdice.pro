@@ -9,7 +9,7 @@ TARGET = zeitdice
 
 TEMPLATE = app
 
-VERSION = 0.3.0
+VERSION = 0.3.1
 
 CONFIG += c++11
 
