@@ -256,7 +256,8 @@ void MainWindow::on_actionHipstagram_triggered(bool checked)
     RefreshSignal();
 }
 
-void MainWindow::EnableControls(const bool lock) {
+void MainWindow::EnableControls(const bool lock)
+{
     this->ui->actionOpen->setEnabled(lock);
     this->ui->actionPlay->setEnabled(lock);
     this->ui->actionLoop->setEnabled(lock);
@@ -272,12 +273,14 @@ void MainWindow::EnableControls(const bool lock) {
 
 void MainWindow::on_actionMovie_triggered()
 {
-    QString footage_folder = QFileDialog::getExistingDirectory(this,
-                                                               "Select a folder to output to",
-                                                               "",
-                                                               QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks );
+    QString export_file = QFileDialog::getSaveFileName(this,
+                                                       "Choose an output file name and location",
+                                                       QFileInfo(persistent_open_dir, "export.mp4").absoluteFilePath(),
+                                                       "MPEG-4/H.264 (*.mp4)",
+                                                       0,
+                                                       QFileDialog::DontResolveSymlinks);
 
-    if(!footage_folder.isEmpty()) {
+    if(!export_file.isEmpty()) {
 
         EnableControls(false);
 
@@ -285,7 +288,7 @@ void MainWindow::on_actionMovie_triggered()
         zeitengine->stop_flag = true;
         zeitengine->control_mutex.unlock();
 
-        emit ExportSignal(QFileInfo(footage_folder, "zeitdice-export.h264"));
+        emit ExportSignal(QFileInfo(export_file));
     }
 }
 

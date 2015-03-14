@@ -88,7 +88,7 @@
   </widget>
   <action name="actionPlay">
    <property name="icon">
-    <iconset resource="zeitdice.qrc">
+    <iconset resource="../zeitdice.qrc">
      <normaloff>:/icons/icons/play.png</normaloff>:/icons/icons/play.png</iconset>
    </property>
    <property name="text">
@@ -109,7 +109,7 @@
   </action>
   <action name="actionStop">
    <property name="icon">
-    <iconset resource="zeitdice.qrc">
+    <iconset resource="../zeitdice.qrc">
      <normaloff>:/icons/icons/stop.png</normaloff>:/icons/icons/stop.png</iconset>
    </property>
    <property name="text">
@@ -124,7 +124,7 @@
   </action>
   <action name="actionLoop">
    <property name="icon">
-    <iconset resource="zeitdice.qrc">
+    <iconset resource="../zeitdice.qrc">
      <normaloff>:/icons/icons/repeat.png</normaloff>:/icons/icons/repeat.png</iconset>
    </property>
    <property name="text">
@@ -139,7 +139,7 @@
   </action>
   <action name="actionMovie">
    <property name="icon">
-    <iconset resource="zeitdice.qrc">
+    <iconset resource="../zeitdice.qrc">
      <normaloff>:/icons/icons/download.png</normaloff>:/icons/icons/download.png</iconset>
    </property>
    <property name="text">
@@ -154,7 +154,7 @@
   </action>
   <action name="actionAbout">
    <property name="icon">
-    <iconset resource="zeitdice.qrc">
+    <iconset resource="../zeitdice.qrc">
      <normaloff>:/icons/icons/info.png</normaloff>:/icons/icons/info.png</iconset>
    </property>
    <property name="text">
@@ -166,7 +166,7 @@
   </action>
   <action name="actionCycleFramerates">
    <property name="icon">
-    <iconset resource="zeitdice.qrc">
+    <iconset resource="../zeitdice.qrc">
      <normaloff>:/icons/icons/sort-amount-asc.png</normaloff>:/icons/icons/sort-amount-asc.png</iconset>
    </property>
    <property name="text">
@@ -184,7 +184,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="zeitdice.qrc">
+    <iconset resource="../zeitdice.qrc">
      <normaloff>:/icons/icons/magic.png</normaloff>:/icons/icons/magic.png</iconset>
    </property>
    <property name="text">
@@ -202,7 +202,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="zeitdice.qrc">
+    <iconset resource="../zeitdice.qrc">
      <normaloff>:/icons/icons/magic.png</normaloff>:/icons/icons/magic.png</iconset>
    </property>
    <property name="text">
@@ -220,7 +220,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="zeitdice.qrc">
+    <iconset resource="../zeitdice.qrc">
      <normaloff>:/icons/icons/magic.png</normaloff>:/icons/icons/magic.png</iconset>
    </property>
    <property name="text">
@@ -238,7 +238,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="zeitdice.qrc">
+    <iconset resource="../zeitdice.qrc">
      <normaloff>:/icons/icons/magic.png</normaloff>:/icons/icons/magic.png</iconset>
    </property>
    <property name="text">
@@ -253,7 +253,7 @@
   </action>
   <action name="actionSettings">
    <property name="icon">
-    <iconset resource="zeitdice.qrc">
+    <iconset resource="../zeitdice.qrc">
      <normaloff>:/icons/icons/cogs.png</normaloff>:/icons/icons/cogs.png</iconset>
    </property>
    <property name="text">
@@ -265,7 +265,7 @@
   </action>
   <action name="actionOpen">
    <property name="icon">
-    <iconset resource="zeitdice.qrc">
+    <iconset resource="../zeitdice.qrc">
      <normaloff>:/icons/icons/folder-open.png</normaloff>:/icons/icons/folder-open.png</iconset>
    </property>
    <property name="text">
@@ -277,7 +277,7 @@
   </action>
   <action name="actionFlipVertically">
    <property name="icon">
-    <iconset resource="zeitdice.qrc">
+    <iconset resource="../zeitdice.qrc">
      <normaloff>:/icons/icons/magic.png</normaloff>:/icons/icons/magic.png</iconset>
    </property>
    <property name="text">
@@ -289,7 +289,7 @@
   </action>
  </widget>
  <resources>
-  <include location="zeitdice.qrc"/>
+  <include location="../zeitdice.qrc"/>
  </resources>
  <connections/>
 </ui>
