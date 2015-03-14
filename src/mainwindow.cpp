@@ -19,6 +19,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->statusbar->addPermanentWidget(progressbar, 100);
 
     this->ui->actionSettings->setVisible(false);
+    this->ui->actionLoop->setChecked(true);
 
     InitializeZeitdiceDirectory();
 
@@ -120,7 +121,6 @@ void MainWindow::on_actionPlay_triggered()
 {
     zeitengine->control_mutex.lock();
     zeitengine->stop_flag = false;
-    zeitengine->loop_flag = false;
     zeitengine->control_mutex.unlock();
 
     emit PlaySignal();
@@ -129,18 +129,14 @@ void MainWindow::on_actionPlay_triggered()
 void MainWindow::on_actionLoop_triggered()
 {
     zeitengine->control_mutex.lock();
-    zeitengine->stop_flag = false;
-    zeitengine->loop_flag = true;
+    zeitengine->loop_flag = !zeitengine->loop_flag;
     zeitengine->control_mutex.unlock();
-
-    emit PlaySignal();
 }
 
 void MainWindow::on_actionStop_triggered()
 {
     zeitengine->control_mutex.lock();
     zeitengine->stop_flag = true;
-    zeitengine->loop_flag = false;
     zeitengine->control_mutex.unlock();
 }
 
@@ -358,7 +354,6 @@ void MainWindow::on_actionOpen_triggered()
         zeitengine->control_mutex.lock();
         zeitengine->filter_flag = ZEIT_FILTER_NONE;
         zeitengine->configured_framerate = ZEIT_RATE_24p;
-        zeitengine->loop_flag = false;
         zeitengine->stop_flag = true;
         zeitengine->control_mutex.unlock();
 

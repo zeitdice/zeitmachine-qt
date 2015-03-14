@@ -45,7 +45,7 @@ ZeitEngine::ZeitEngine(GLVideoWidget* video_widget, QObject *parent) :
 
     control_mutex.lock();
     stop_flag = false;
-    loop_flag = false;
+    loop_flag = true;
     filter_flag = ZEIT_FILTER_NONE;
     control_mutex.unlock();
 
@@ -126,8 +126,7 @@ void ZeitEngine::Load(const QFileInfoList& sequence)
 
     InitDecoder();
 
-    Refresh();
-
+    Play();
 }
 
 void ZeitEngine::Refresh()
@@ -163,6 +162,10 @@ void ZeitEngine::Cache()
 
 void ZeitEngine::Play()
 {
+    control_mutex.lock();
+    stop_flag = false;
+    control_mutex.unlock();
+
     sequence_iterator = source_sequence.constBegin();
 
     if(!preview_flag) {
@@ -175,6 +178,7 @@ void ZeitEngine::Play()
         timer.start();
 
         control_mutex.lock();
+
         bool break_requested = stop_flag || (!loop_flag && sequence_iterator == source_sequence.constEnd());
 
         switch(configured_framerate) {

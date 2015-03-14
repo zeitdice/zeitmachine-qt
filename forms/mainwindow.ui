@@ -89,7 +89,8 @@
   <action name="actionPlay">
    <property name="icon">
     <iconset resource="../zeitdice.qrc">
-     <normaloff>:/icons/icons/play.png</normaloff>:/icons/icons/play.png</iconset>
+     <normaloff>:/icons/icons/play.png</normaloff>
+     <normalon>:/icons/icons/play.png</normalon>:/icons/icons/play.png</iconset>
    </property>
    <property name="text">
     <string>Play</string>
@@ -99,6 +100,9 @@
    </property>
    <property name="toolTip">
     <string>Start playback of the sequence</string>
+   </property>
+   <property name="shortcut">
+    <string>Space</string>
    </property>
    <property name="visible">
     <bool>true</bool>
@@ -118,11 +122,11 @@
    <property name="toolTip">
     <string>Stop playing back the sequence</string>
    </property>
-   <property name="shortcut">
-    <string>Ctrl+S</string>
-   </property>
   </action>
   <action name="actionLoop">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="icon">
     <iconset resource="../zeitdice.qrc">
      <normaloff>:/icons/icons/repeat.png</normaloff>:/icons/icons/repeat.png</iconset>
@@ -132,9 +136,6 @@
    </property>
    <property name="toolTip">
     <string>Enable or disable looped playback</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+L</string>
    </property>
   </action>
   <action name="actionMovie">
@@ -147,9 +148,6 @@
    </property>
    <property name="toolTip">
     <string>Export the sequence as a movie file</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+M</string>
    </property>
   </action>
   <action name="actionAbout">
@@ -175,9 +173,6 @@
    <property name="toolTip">
     <string>Cycle through all available framerates</string>
    </property>
-   <property name="shortcut">
-    <string>Ctrl+C</string>
-   </property>
   </action>
   <action name="actionVignette">
    <property name="checkable">
@@ -192,9 +187,6 @@
    </property>
    <property name="toolTip">
     <string>Apply a vignette filter to the video (makes the images darker towards the borders)</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+V</string>
    </property>
   </action>
   <action name="actionBlackWhite">
@@ -211,9 +203,6 @@
    <property name="toolTip">
     <string>Apply a black and white filter to the video</string>
    </property>
-   <property name="shortcut">
-    <string>Ctrl+B</string>
-   </property>
   </action>
   <action name="actionSepia">
    <property name="checkable">
@@ -229,9 +218,6 @@
    <property name="toolTip">
     <string>Apply a sepia color effect to the video</string>
    </property>
-   <property name="shortcut">
-    <string>Ctrl+E</string>
-   </property>
   </action>
   <action name="actionHipstagram">
    <property name="checkable">
@@ -246,9 +232,6 @@
    </property>
    <property name="toolTip">
     <string>Apply the Hipstagram effect to the video</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+H</string>
    </property>
   </action>
   <action name="actionSettings">
