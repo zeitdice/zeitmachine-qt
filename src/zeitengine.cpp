@@ -47,7 +47,6 @@ ZeitEngine::ZeitEngine(GLVideoWidget* video_widget, QObject *parent) :
     filter_flag = ZEIT_FILTER_NONE;
     flip_x_flag = true;
     flip_y_flag = true;
-    rotate_90d_ccw_flag = false;
     rotate_90d_cw_flag = false;
     control_mutex.unlock();
 
@@ -196,10 +195,7 @@ void ZeitEngine::Play()
 
         bool flip_x = flip_x_flag;
         bool flip_y = flip_y_flag;
-
-        bool rotation_requested = rotate_90d_ccw_flag || rotate_90d_cw_flag;
-        bool rotate_ccw = rotate_90d_ccw_flag;
-        bool rotate_cw = rotate_90d_cw_flag;
+        bool rotate_90d_cw = rotate_90d_cw_flag;
 
         ZeitFilter filter = filter_flag;
 
@@ -216,7 +212,7 @@ void ZeitEngine::Play()
 
         DecodeFrame();
 
-        if(!display_initialized || (rotation_requested != rotation_initialized)) {
+        if(!display_initialized || (rotate_90d_cw != rotation_initialized)) {
 
             if(scaler_initialized) {
                 FreeScaler();
@@ -224,7 +220,7 @@ void ZeitEngine::Play()
             }
 
             // Swap sides for the fitting algorithm
-            if(rotation_requested) {
+            if(rotate_90d_cw) {
                 display_width = decoder_frame->height;
                 display_height = decoder_frame->width;
             } else {
@@ -249,13 +245,13 @@ void ZeitEngine::Play()
             emit VideoConfigurationUpdated(display_width, display_height, DISPLAY_QT_PIXEL_FORMAT);
 
             // Pre-display everything is still internally unrotated, thus un-swap sides again!
-            if(rotation_requested) {
+            if(rotate_90d_cw) {
                 int keep_width = display_width;
                 display_width = display_height;
                 display_height = keep_width;
             }
 
-            rotation_initialized = rotation_requested;
+            rotation_initialized = rotate_90d_cw;
 
             while(!display_initialized) {
 
@@ -288,9 +284,9 @@ void ZeitEngine::Play()
                 int target_y = y;
 
                 if(flip_x) { target_x =  frame->width - 1 - x; }
-                if(flip_y != rotate_cw) { target_y = frame->height - 1 - y; }
+                if(flip_y != rotate_90d_cw) { target_y = frame->height - 1 - y; }
 
-                if(rotation_requested) {
+                if(rotate_90d_cw) {
                     memcpy(display->image->scanLine(target_x) + target_y * 3,
                            frame->data[0] + y * frame->linesize[0] + x * 3,
                            sizeof(uint8_t) * 3);
