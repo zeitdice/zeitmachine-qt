@@ -279,7 +279,7 @@ void ZeitEngine::Play()
         ++sequence_iterator;
 
         if(timer.elapsed() > frame_timeframe) {
-//            qDebug() << QString::number(timer.elapsed() - frame_timeframe) + "ms lag";
+            // qDebug() << QString::number(timer.elapsed() - frame_timeframe) + "ms lag";
         } else {
             Sleep(frame_timeframe - timer.elapsed());
         }
@@ -889,35 +889,31 @@ void ZeitEngine::ExportFrame(AVFrame* frame, const QFileInfo output_file)
 
     // Y
     for(int y = 0; y < frame->height; y++) {
-        memcpy(encoder_frame->data[0] + (flip_y ? encoder_frame->height - 1 - y : y) * encoder_frame->linesize[0],
-               frame->data[0] + y * frame->linesize[0],
-               frame->width*3);
+        for(int x = 0; x < frame->width; x++) {
+            int target_x = (flip_x ? frame->width - 1 - x : x);
+            int target_y = (flip_y ? frame->height - 1 - y : y);
+
+            memcpy(encoder_frame->data[0] + target_y * encoder_frame->linesize[0] + target_x * 3,
+                   frame->data[0] + y * frame->linesize[0] + x * 3,
+                   sizeof(uint8_t) * 3);
+        }
     }
 
     // Cb and Cr
     for(int y = 0; y < frame->height / 2; y++) {
-        memcpy(encoder_frame->data[1] + (flip_y ? encoder_frame->height / 2 - 1 - y : y) * encoder_frame->linesize[1],
-               frame->data[1] + y * frame->linesize[1],
-               encoder_frame->linesize[1]);
-        memcpy(encoder_frame->data[2] + (flip_y ? encoder_frame->height / 2 - 1 - y : y) * encoder_frame->linesize[2],
-               frame->data[2] + y * frame->linesize[2],
-               encoder_frame->linesize[2]);
+        for(int x = 0; x < frame->width / 2; x++) {
+            int target_x = (flip_x ? frame->width / 2 - 1 - x : x);
+            int target_y = (flip_y ? frame->height / 2 - 1 - y : y);
+
+            memcpy(encoder_frame->data[1] + target_y * encoder_frame->linesize[1] + target_x,
+                   frame->data[1] + y * frame->linesize[1] + x,
+                   sizeof(uint8_t));
+
+            memcpy(encoder_frame->data[2] + target_y * encoder_frame->linesize[2] + target_x,
+                   frame->data[2] + y * frame->linesize[2] + x ,
+                   sizeof(uint8_t));
+        }
     }
-
-//    // Y
-//    for(int y = 0; y < encoder_codec_context->height; y++) {
-//        for(int x = 0; x < encoder_codec_context->width; x++) {
-//            encoder_frame->data[0][y * encoder_frame->linesize[0] + x] = frame->data[0][y * frame->linesize[0] + x];
-//        }
-//    }
-
-//    // Cb and Cr
-//    for(int y = 0; y < encoder_codec_context->height / 2; y++) {
-//        for(int x = 0; x < encoder_codec_context->width / 2; x++) {
-//            encoder_frame->data[1][y * encoder_frame->linesize[1] + x] = frame->data[1][y * frame->linesize[1] + x] ;
-//            encoder_frame->data[2][y * encoder_frame->linesize[2] + x] = frame->data[2][y * frame->linesize[2] + x];
-//        }
-//    }
 
     encoder_frame->pts = sequence_iterator - source_sequence.constBegin();
 
