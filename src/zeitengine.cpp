@@ -257,17 +257,17 @@ void ZeitEngine::Play()
         control_mutex.unlock();
 
         display->image_mutex.lock();
-        if(filter != ZEIT_FILTER_NONE) {
-            for(int y = 0; y < filter_frame->height; y++) {
-                memcpy(display->image->scanLine(flip_y ? filter_frame->height - 1 - y : y),
-                       filter_frame->data[0] + y*filter_frame->linesize[0],
-                       filter_frame->width*3);
-            }
-        } else {
-            for(int y = 0; y < scaler_frame->height; y++) {
-                memcpy(display->image->scanLine(flip_y ? scaler_frame->height - 1 - y : y),
-                       scaler_frame->data[0] + y*scaler_frame->linesize[0],
-                       scaler_frame->width*3);
+        AVFrame* frame = (filter == ZEIT_FILTER_NONE ? scaler_frame :
+                                                       filter_frame);
+
+        for(int y = 0; y < frame->height; y++) {
+            for(int x = 0; x < frame->width; x++) {
+                int target_x = (flip_x ? frame->width - 1 - x : x);
+                int target_y = (flip_y ? frame->height - 1 - y : y);
+
+                memcpy(display->image->scanLine(target_y) + target_x * 3,
+                       frame->data[0] + y * frame->linesize[0] + x * 3,
+                       sizeof(uint8_t) * 3);
             }
         }
         display->image_mutex.unlock();

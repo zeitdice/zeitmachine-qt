@@ -357,6 +357,10 @@ void MainWindow::on_actionOpen_triggered()
 
         // Stop all zeitengine activity and reset all flags
         zeitengine->control_mutex.lock();
+        zeitengine->flip_x_flag = true;
+        zeitengine->flip_y_flag = true;
+        zeitengine->rotate_90d_ccw_flag = false;
+        zeitengine->rotate_90d_cw_flag = false;
         zeitengine->filter_flag = ZEIT_FILTER_NONE;
         zeitengine->configured_framerate = ZEIT_RATE_24p;
         zeitengine->stop_flag = true;
