@@ -19,6 +19,7 @@ ZeitEngine::ZeitEngine(GLVideoWidget* video_widget, QObject *parent) :
     display_safe_max_height = screen->availableSize().height() - 200;
     display = video_widget;
     display_initialized = false;
+    rotation_initialized = false;
 
     configured_framerate = ZEIT_RATE_24p;
 
@@ -177,7 +178,6 @@ void ZeitEngine::Play()
         timer.start();
 
         control_mutex.lock();
-
         bool break_requested = stop_flag || (!loop_flag && sequence_iterator == source_sequence.constEnd());
 
         switch(configured_framerate) {
@@ -194,8 +194,15 @@ void ZeitEngine::Play()
                 frame_timeframe = 1000.0f / configured_framerate;
         }
 
+        bool flip_x = flip_x_flag;
+        bool flip_y = flip_y_flag;
+
+        bool rotation_requested = rotate_90d_ccw_flag || rotate_90d_cw_flag;
+        bool rotate_ccw = rotate_90d_ccw_flag;
+        bool rotate_cw = rotate_90d_cw_flag;
 
         ZeitFilter filter = filter_flag;
+
         control_mutex.unlock();
 
         if(break_requested) {
@@ -209,10 +216,21 @@ void ZeitEngine::Play()
 
         DecodeFrame();
 
-        if(!display_initialized) {
+        if(!display_initialized || (rotation_requested != rotation_initialized)) {
 
-            display_width = decoder_frame->width;
-            display_height = decoder_frame->height;
+            if(scaler_initialized) {
+                FreeScaler();
+                scaler_initialized = false;
+            }
+
+            // Swap sides for the fitting algorithm
+            if(rotation_requested) {
+                display_width = decoder_frame->height;
+                display_height = decoder_frame->width;
+            } else {
+                display_width = decoder_frame->width;
+                display_height = decoder_frame->height;
+            }
 
             // Fit display resolution into available screen space
             while(display_width > display_safe_max_width || display_height > display_safe_max_height) {
@@ -229,6 +247,15 @@ void ZeitEngine::Play()
             }
 
             emit VideoConfigurationUpdated(display_width, display_height, DISPLAY_QT_PIXEL_FORMAT);
+
+            // Pre-display everything is still internally unrotated, thus un-swap sides again!
+            if(rotation_requested) {
+                int keep_width = display_width;
+                display_width = display_height;
+                display_height = keep_width;
+            }
+
+            rotation_initialized = rotation_requested;
 
             while(!display_initialized) {
 
@@ -251,23 +278,27 @@ void ZeitEngine::Play()
             FilterFrame(scaler_frame, filter);
         }
 
-        control_mutex.lock();
-        bool flip_x = flip_x_flag;
-        bool flip_y = flip_y_flag;
-        control_mutex.unlock();
-
         display->image_mutex.lock();
         AVFrame* frame = (filter == ZEIT_FILTER_NONE ? scaler_frame :
                                                        filter_frame);
 
         for(int y = 0; y < frame->height; y++) {
             for(int x = 0; x < frame->width; x++) {
-                int target_x = (flip_x ? frame->width - 1 - x : x);
-                int target_y = (flip_y ? frame->height - 1 - y : y);
+                int target_x = x;
+                int target_y = y;
 
-                memcpy(display->image->scanLine(target_y) + target_x * 3,
-                       frame->data[0] + y * frame->linesize[0] + x * 3,
-                       sizeof(uint8_t) * 3);
+                if(flip_x) { target_x =  frame->width - 1 - x; }
+                if(flip_y != rotate_cw) { target_y = frame->height - 1 - y; }
+
+                if(rotation_requested) {
+                    memcpy(display->image->scanLine(target_x) + target_y * 3,
+                           frame->data[0] + y * frame->linesize[0] + x * 3,
+                           sizeof(uint8_t) * 3);
+                } else {
+                    memcpy(display->image->scanLine(target_y) + target_x * 3,
+                           frame->data[0] + y * frame->linesize[0] + x * 3,
+                           sizeof(uint8_t) * 3);
+                }
             }
         }
         display->image_mutex.unlock();

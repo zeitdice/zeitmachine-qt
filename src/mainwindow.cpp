@@ -378,7 +378,11 @@ void MainWindow::on_actionOpen_triggered()
 void MainWindow::on_actionFlipX_triggered()
 {
     zeitengine->control_mutex.lock();
-    zeitengine->flip_x_flag = !zeitengine->flip_x_flag;
+    if(zeitengine->rotate_90d_ccw_flag || zeitengine->rotate_90d_cw_flag) {
+        zeitengine->flip_y_flag = !zeitengine->flip_y_flag;
+    } else {
+        zeitengine->flip_x_flag = !zeitengine->flip_x_flag;
+    }
     zeitengine->control_mutex.unlock();
 
     RefreshSignal();
@@ -387,7 +391,11 @@ void MainWindow::on_actionFlipX_triggered()
 void MainWindow::on_actionFlipY_triggered()
 {
     zeitengine->control_mutex.lock();
-    zeitengine->flip_y_flag = !zeitengine->flip_y_flag;
+    if(zeitengine->rotate_90d_ccw_flag || zeitengine->rotate_90d_cw_flag) {
+        zeitengine->flip_x_flag = !zeitengine->flip_x_flag;
+    } else {
+        zeitengine->flip_y_flag = !zeitengine->flip_y_flag;
+    }
     zeitengine->control_mutex.unlock();
 
     RefreshSignal();

@@ -98,6 +98,7 @@ class ZeitEngine : public QObject
     unsigned int display_width;
     unsigned int display_height;
     bool display_initialized;    //!< Flag to check for display being initialized
+    bool rotation_initialized;    //!< Flag to check for rotation being initialized
 
     // Cache members
     //uint8_t **cache_data;
