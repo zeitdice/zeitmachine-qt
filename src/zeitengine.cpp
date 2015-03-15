@@ -214,6 +214,11 @@ void ZeitEngine::Play()
 
         if(!display_initialized || (rotate_90d_cw != rotation_initialized)) {
 
+            if(filter_initialized) {
+                FreeFilterData();
+                filter_initialized = false;
+            }
+
             if(scaler_initialized) {
                 FreeScaler();
                 scaler_initialized = false;
@@ -673,25 +678,6 @@ void ZeitEngine::ScaleFrame(AVFrame *frame,
                    target_pixel_format);
     }
 
-//    control_mutex.lock();
-//    if(vertical_flip_flag) {
-//        for(int i = 0; i < 4; i++) {
-//            frame->data[i] += frame->linesize[i] * (frame->height-1);
-//            frame->linesize[i] = -frame->linesize[i];
-//        }
-//    }
-//    control_mutex.unlock();
-
-//    qDebug() << "Sourceframe before scaling";
-//    qDebug() << "TARGET_WIDTH" << frame->width;
-//    qDebug() << "TARGET_HEIGHT" << frame->height;
-//    qDebug() << "LINESIZE[0]" << frame->linesize[0];
-//    qDebug() << "LINESIZE[1]" << frame->linesize[1];
-//    qDebug() << "LINESIZE[2]" << frame->linesize[2];
-
-//    qDebug() << (const uint8_t * const*)frame;
-//    qDebug() << (const uint8_t * const*)frame->data;
-
     sws_scale(scaler_context,
               (const uint8_t * const*)frame->data,
               frame->linesize,
@@ -699,13 +685,6 @@ void ZeitEngine::ScaleFrame(AVFrame *frame,
               frame->height,
               scaler_frame->data,
               scaler_frame->linesize);
-
-//    qDebug() << "Targetframe after scaling";
-//    qDebug() << "TARGET_WIDTH" << target_width;
-//    qDebug() << "TARGET_HEIGHT" << target_height;
-//    qDebug() << "LINESIZE[0]" << scaler_frame->linesize[0];
-//    qDebug() << "LINESIZE[1]" << scaler_frame->linesize[1];
-//    qDebug() << "LINESIZE[2]" << scaler_frame->linesize[2];
 }
 
 void ZeitEngine::FreeScaler()
@@ -840,8 +819,16 @@ void ZeitEngine::InitExporter(AVFrame* frame, const QFileInfo output_file)
     }
 
     encoder_codec_context->bit_rate = 25000000;
-    encoder_codec_context->width = frame->width;
-    encoder_codec_context->height = frame->height;
+
+    control_mutex.lock();
+    if(rotate_90d_cw_flag) {
+        encoder_codec_context->width = frame->height;
+        encoder_codec_context->height = frame->width;
+    } else {
+        encoder_codec_context->width = frame->width;
+        encoder_codec_context->height = frame->height;
+    }
+    control_mutex.unlock();
 
     switch(configured_framerate) {
 
@@ -912,33 +899,51 @@ void ZeitEngine::ExportFrame(AVFrame* frame, const QFileInfo output_file)
     control_mutex.lock();
     bool flip_x = flip_x_flag;
     bool flip_y = flip_y_flag;
+    bool rotate_90d_cw = rotate_90d_cw_flag;
     control_mutex.unlock();
 
     // Y
     for(int y = 0; y < frame->height; y++) {
         for(int x = 0; x < frame->width; x++) {
-            int target_x = (flip_x ? frame->width - 1 - x : x);
-            int target_y = (flip_y ? frame->height - 1 - y : y);
+            int target_x = x;
+            int target_y = y;
 
-            memcpy(encoder_frame->data[0] + target_y * encoder_frame->linesize[0] + target_x * 3,
-                   frame->data[0] + y * frame->linesize[0] + x * 3,
-                   sizeof(uint8_t) * 3);
+            if(flip_x) { target_x = frame->width - 1 - x; }
+            if(flip_y != rotate_90d_cw) { target_y = frame->height - 1 - y; }
+
+            if(rotate_90d_cw) {
+                memcpy(encoder_frame->data[0] + target_x * encoder_frame->linesize[0] + target_y,
+                       frame->data[0] + y * frame->linesize[0] + x,
+                       sizeof(uint8_t));
+            } else {
+                memcpy(encoder_frame->data[0] + target_y * encoder_frame->linesize[0] + target_x,
+                       frame->data[0] + y * frame->linesize[0] + x,
+                       sizeof(uint8_t));
+            }
         }
     }
 
     // Cb and Cr
     for(int y = 0; y < frame->height / 2; y++) {
         for(int x = 0; x < frame->width / 2; x++) {
-            int target_x = (flip_x ? frame->width / 2 - 1 - x : x);
-            int target_y = (flip_y ? frame->height / 2 - 1 - y : y);
+            int target_x = x;
+            int target_y = y;
 
-            memcpy(encoder_frame->data[1] + target_y * encoder_frame->linesize[1] + target_x,
-                   frame->data[1] + y * frame->linesize[1] + x,
-                   sizeof(uint8_t));
+            if(flip_x) { target_x =  frame->width / 2 - 1 - x; }
+            if(flip_y != rotate_90d_cw) { target_y = frame->height / 2 - 1 - y; }
 
-            memcpy(encoder_frame->data[2] + target_y * encoder_frame->linesize[2] + target_x,
-                   frame->data[2] + y * frame->linesize[2] + x ,
-                   sizeof(uint8_t));
+            // (Iterate over Cb and Cr Plane)
+            for(int p = 1; p < 3; p++) {
+                if(rotate_90d_cw) {
+                    memcpy(encoder_frame->data[p] + target_x * encoder_frame->linesize[p] + target_y,
+                           frame->data[p] + y * frame->linesize[p] + x,
+                           sizeof(uint8_t));
+                } else {
+                    memcpy(encoder_frame->data[p] + target_y * encoder_frame->linesize[p] + target_x,
+                           frame->data[p] + y * frame->linesize[p] + x,
+                           sizeof(uint8_t));
+                }
+            }
         }
     }
 
