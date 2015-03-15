@@ -77,7 +77,10 @@
    <addaction name="actionLoop"/>
    <addaction name="actionStop"/>
    <addaction name="actionCycleFramerates"/>
-   <addaction name="actionFlipVertically"/>
+   <addaction name="actionFlipX"/>
+   <addaction name="actionFlipY"/>
+   <addaction name="actionRotateCW"/>
+   <addaction name="actionRotateCCW"/>
    <addaction name="actionVignette"/>
    <addaction name="actionBlackWhite"/>
    <addaction name="actionSepia"/>
@@ -129,7 +132,7 @@
    </property>
    <property name="icon">
     <iconset resource="../zeitdice.qrc">
-     <normaloff>:/icons/icons/repeat.png</normaloff>:/icons/icons/repeat.png</iconset>
+     <normaloff>:/icons/icons/refresh.png</normaloff>:/icons/icons/refresh.png</iconset>
    </property>
    <property name="text">
     <string>Loop</string>
@@ -168,7 +171,7 @@
      <normaloff>:/icons/icons/sort-amount-asc.png</normaloff>:/icons/icons/sort-amount-asc.png</iconset>
    </property>
    <property name="text">
-    <string>Cycle Framerates</string>
+    <string>Change Speed</string>
    </property>
    <property name="toolTip">
     <string>Cycle through all available framerates</string>
@@ -258,16 +261,52 @@
     <string>Choose a folder to open footage from</string>
    </property>
   </action>
-  <action name="actionFlipVertically">
+  <action name="actionFlipY">
    <property name="icon">
     <iconset resource="../zeitdice.qrc">
-     <normaloff>:/icons/icons/magic.png</normaloff>:/icons/icons/magic.png</iconset>
+     <normaloff>:/icons/icons/arrows-v.png</normaloff>:/icons/icons/arrows-v.png</iconset>
    </property>
    <property name="text">
-    <string>Flip Vertically</string>
+    <string>Flip Y</string>
    </property>
    <property name="toolTip">
     <string>Flip the footage in the vertical domain</string>
+   </property>
+  </action>
+  <action name="actionFlipX">
+   <property name="icon">
+    <iconset resource="../zeitdice.qrc">
+     <normaloff>:/icons/icons/arrows-h.png</normaloff>:/icons/icons/arrows-h.png</iconset>
+   </property>
+   <property name="text">
+    <string>Flip X</string>
+   </property>
+   <property name="toolTip">
+    <string>Flip the footage along the horizontal axis</string>
+   </property>
+  </action>
+  <action name="actionRotateCW">
+   <property name="icon">
+    <iconset resource="../zeitdice.qrc">
+     <normaloff>:/icons/icons/rotate-right.png</normaloff>:/icons/icons/rotate-right.png</iconset>
+   </property>
+   <property name="text">
+    <string>Rotate CW</string>
+   </property>
+   <property name="toolTip">
+    <string>Rotate the footage clockwise by 90 degrees</string>
+   </property>
+  </action>
+  <action name="actionRotateCCW">
+   <property name="icon">
+    <iconset resource="../zeitdice.qrc">
+     <normaloff>:/icons/icons/rotate-left.png</normaloff>:/icons/icons/rotate-left.png</iconset>
+   </property>
+   <property name="text">
+    <string>Rotate CCW</string>
+   </property>
+   <property name="toolTip">
+    <string>Rotate the footage counter-clockwise by 90 degrees</string>
    </property>
   </action>
  </widget>

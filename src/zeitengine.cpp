@@ -6,10 +6,9 @@ ZeitEngine::ZeitEngine(GLVideoWidget* video_widget, QObject *parent) :
     static bool avglobals_initialized = false;
 
     if(!avglobals_initialized) {
-        avcodec_register_all(); // probably redundant
-        avfilter_register_all(); // probably redundant
-        av_register_all(); // probably takes care of the two preceding lines
-
+        av_register_all();
+        avcodec_register_all();
+        avfilter_register_all();
         avglobals_initialized = true;
     }
 
@@ -20,8 +19,6 @@ ZeitEngine::ZeitEngine(GLVideoWidget* video_widget, QObject *parent) :
     display_safe_max_height = screen->availableSize().height() - 200;
     display = video_widget;
     display_initialized = false;
-
-//    qDebug() << "Safe screen area is" << display_safe_max_width << "x" << display_safe_max_height;
 
     configured_framerate = ZEIT_RATE_24p;
 
@@ -47,11 +44,13 @@ ZeitEngine::ZeitEngine(GLVideoWidget* video_widget, QObject *parent) :
     stop_flag = false;
     loop_flag = true;
     filter_flag = ZEIT_FILTER_NONE;
+    flip_x_flag = true;
+    flip_y_flag = true;
+    rotate_90d_ccw_flag = false;
+    rotate_90d_cw_flag = false;
     control_mutex.unlock();
 
     preview_flag = false;
-
-    vertical_flip_flag = true;
 
     exporter_initialized = false;
 }
@@ -253,19 +252,20 @@ void ZeitEngine::Play()
         }
 
         control_mutex.lock();
-        bool flip = vertical_flip_flag;
+        bool flip_x = flip_x_flag;
+        bool flip_y = flip_y_flag;
         control_mutex.unlock();
 
         display->image_mutex.lock();
         if(filter != ZEIT_FILTER_NONE) {
             for(int y = 0; y < filter_frame->height; y++) {
-                memcpy(display->image->scanLine(flip ? filter_frame->height - 1 - y : y),
+                memcpy(display->image->scanLine(flip_y ? filter_frame->height - 1 - y : y),
                        filter_frame->data[0] + y*filter_frame->linesize[0],
                        filter_frame->width*3);
             }
         } else {
             for(int y = 0; y < scaler_frame->height; y++) {
-                memcpy(display->image->scanLine(flip ? scaler_frame->height - 1 - y : y),
+                memcpy(display->image->scanLine(flip_y ? scaler_frame->height - 1 - y : y),
                        scaler_frame->data[0] + y*scaler_frame->linesize[0],
                        scaler_frame->width*3);
             }
@@ -883,22 +883,23 @@ void ZeitEngine::ExportFrame(AVFrame* frame, const QFileInfo output_file)
     encoder_packet->size = 0;
 
     control_mutex.lock();
-    bool flip = vertical_flip_flag;
+    bool flip_x = flip_x_flag;
+    bool flip_y = flip_y_flag;
     control_mutex.unlock();
 
     // Y
     for(int y = 0; y < frame->height; y++) {
-        memcpy(encoder_frame->data[0] + (flip ? encoder_frame->height - 1 - y : y) * encoder_frame->linesize[0],
+        memcpy(encoder_frame->data[0] + (flip_y ? encoder_frame->height - 1 - y : y) * encoder_frame->linesize[0],
                frame->data[0] + y * frame->linesize[0],
                frame->width*3);
     }
 
     // Cb and Cr
     for(int y = 0; y < frame->height / 2; y++) {
-        memcpy(encoder_frame->data[1] + (flip ? encoder_frame->height / 2 - 1 - y : y) * encoder_frame->linesize[1],
+        memcpy(encoder_frame->data[1] + (flip_y ? encoder_frame->height / 2 - 1 - y : y) * encoder_frame->linesize[1],
                frame->data[1] + y * frame->linesize[1],
                encoder_frame->linesize[1]);
-        memcpy(encoder_frame->data[2] + (flip ? encoder_frame->height / 2 - 1 - y : y) * encoder_frame->linesize[2],
+        memcpy(encoder_frame->data[2] + (flip_y ? encoder_frame->height / 2 - 1 - y : y) * encoder_frame->linesize[2],
                frame->data[2] + y * frame->linesize[2],
                encoder_frame->linesize[2]);
     }

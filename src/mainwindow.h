@@ -70,7 +70,10 @@ private slots:
     void on_actionMovie_triggered();
     void on_actionSettings_triggered();
     void on_actionOpen_triggered();
-    void on_actionFlipVertically_triggered();
+    void on_actionFlipX_triggered();
+    void on_actionFlipY_triggered();
+    void on_actionRotateCCW_triggered();
+    void on_actionRotateCW_triggered();
 };
 
 #endif // MAINWINDOW_H

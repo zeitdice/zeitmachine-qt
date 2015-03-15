@@ -344,9 +344,26 @@ public:
     bool stop_flag;
 
     /*!
-     * \brief Used for signaling the ZeitEngine to flip source footage
+     * \brief Used for signaling the ZeitEngine to x-flip the footage
      */
-    bool vertical_flip_flag;
+    bool flip_x_flag;
+
+    /*!
+     * \brief Used for signaling the ZeitEngine to y-flip the footage
+     */
+    bool flip_y_flag;
+
+    /*!
+     * \brief Used for signaling the ZeitEngine to rotate
+     *        the footage 90 degrees counter-clockwise
+     */
+    bool rotate_90d_ccw_flag;
+
+    /*!
+     * \brief Used for signaling the ZeitEngine to rotate
+     *        the footage 90 degrees clockwise
+     */
+    bool rotate_90d_cw_flag;
 
     /*!
      * \brief Used for signaling the ZeitEngine to stop playback

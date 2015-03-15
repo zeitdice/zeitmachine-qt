@@ -18,8 +18,10 @@ MainWindow::MainWindow(QWidget *parent) :
     progressbar->hide();
     ui->statusbar->addPermanentWidget(progressbar, 100);
 
+    EnableControls(false);
     this->ui->actionSettings->setVisible(false);
     this->ui->actionLoop->setChecked(true);
+    this->ui->actionOpen->setEnabled(true);
 
     InitializeZeitdiceDirectory();
 
@@ -259,7 +261,10 @@ void MainWindow::EnableControls(const bool lock)
     this->ui->actionLoop->setEnabled(lock);
     this->ui->actionStop->setEnabled(lock);
     this->ui->actionCycleFramerates->setEnabled(lock);
-    this->ui->actionFlipVertically->setEnabled(lock);
+    this->ui->actionFlipX->setEnabled(lock);
+    this->ui->actionFlipY->setEnabled(lock);
+    this->ui->actionRotateCCW->setEnabled(lock);
+    this->ui->actionRotateCW->setEnabled(lock);
     this->ui->actionVignette->setEnabled(lock);
     this->ui->actionBlackWhite->setEnabled(lock);
     this->ui->actionSepia->setEnabled(lock);
@@ -358,6 +363,7 @@ void MainWindow::on_actionOpen_triggered()
         zeitengine->control_mutex.unlock();
 
         // Reflect the reset in the UI as well
+        EnableControls(true);
         UncheckOtherFilters(NULL);
 
         // Send the list of files to the zeitengine
@@ -365,10 +371,53 @@ void MainWindow::on_actionOpen_triggered()
     }
 }
 
-void MainWindow::on_actionFlipVertically_triggered()
+void MainWindow::on_actionFlipX_triggered()
 {
     zeitengine->control_mutex.lock();
-    zeitengine->vertical_flip_flag = !zeitengine->vertical_flip_flag;
+    zeitengine->flip_x_flag = !zeitengine->flip_x_flag;
+    zeitengine->control_mutex.unlock();
+
+    RefreshSignal();
+}
+
+void MainWindow::on_actionFlipY_triggered()
+{
+    zeitengine->control_mutex.lock();
+    zeitengine->flip_y_flag = !zeitengine->flip_y_flag;
+    zeitengine->control_mutex.unlock();
+
+    RefreshSignal();
+}
+
+void MainWindow::on_actionRotateCCW_triggered()
+{
+    zeitengine->control_mutex.lock();
+    if(zeitengine->rotate_90d_ccw_flag) {
+        zeitengine->rotate_90d_ccw_flag = false;
+        zeitengine->flip_x_flag = !zeitengine->flip_x_flag;
+        zeitengine->flip_y_flag = !zeitengine->flip_y_flag;
+    } else if(zeitengine->rotate_90d_cw_flag) {
+        zeitengine->rotate_90d_cw_flag = false;
+    } else {
+        zeitengine->rotate_90d_ccw_flag = true;
+    }
+    zeitengine->control_mutex.unlock();
+
+    RefreshSignal();
+}
+
+void MainWindow::on_actionRotateCW_triggered()
+{
+    zeitengine->control_mutex.lock();
+    if(zeitengine->rotate_90d_cw_flag) {
+        zeitengine->rotate_90d_cw_flag = false;
+        zeitengine->flip_x_flag = !zeitengine->flip_x_flag;
+        zeitengine->flip_y_flag = !zeitengine->flip_y_flag;
+    } else if(zeitengine->rotate_90d_ccw_flag) {
+        zeitengine->rotate_90d_ccw_flag = false;
+    } else {
+        zeitengine->rotate_90d_cw_flag = true;
+    }
     zeitengine->control_mutex.unlock();
 
     RefreshSignal();
