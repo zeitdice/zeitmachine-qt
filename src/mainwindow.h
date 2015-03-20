@@ -7,13 +7,12 @@
 #include <QMessageBox>
 #include <QMainWindow>
 #include <QProgressBar>
-#include <QSplashScreen>
 #include <QThread>
 
+#include "aboutdialog.h"
 #include "settingsdialog.h"
 #include "glvideowidget.h"
 #include "zeitengine.h"
-#include "version.h"
 
 namespace Ui {
 class MainWindow;
@@ -25,6 +24,7 @@ class MainWindow : public QMainWindow
 
     Ui::MainWindow *ui;
 
+    AboutDialog about;
     SettingsDialog settings;
 
     GLVideoWidget *videoWidget;
