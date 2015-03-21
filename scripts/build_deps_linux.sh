@@ -54,28 +54,62 @@ PRINT() {
 
 ##### Parse commandline arguments #####
 
-X264_SKIP=true
-FFMPEG_SKIP=true
-QT5_SKIP=true
+_exit() {
+    INFO $"Usage: $0 {--all|x264|ffmpeg|qt5} {--dare|--download|--no-download|--configure|--make|--nomake}"
+    exit 1
+}
+
+SKIP_X264=true
+SKIP_FFMPEG=true
+SKIP_QT5=true
 
 case $1 in
   --all)
-    X264_SKIP=false
-    FFMPEG_SKIP=false
-    QT5_SKIP=false
+    SKIP_X264=false
+    SKIP_FFMPEG=false
+    SKIP_QT5=false
   ;;
   --x264)
-    X264_SKIP=false
+    SKIP_X264=false
   ;;
   --ffmpeg)
-    FFMPEG_SKIP=false
+    SKIP_FFMPEG=false
   ;;
   --qt5)
-    QT5_SKIP=false
+    SKIP_QT5=false
   ;;
   *)
-    echo $"Usage: $0 {--all|x264|ffmpeg|qt5}"
-    exit 1
+    _exit
+  ;;
+esac
+
+SKIP_DOWNLOAD=false
+SKIP_CONFIGURE=false
+SKIP_MAKE=false
+
+case $2 in
+  --dare)
+  ;;
+  --download)
+    SKIP_CONFIGURE=true
+    SKIP_MAKE=true
+  ;;
+  --no-download)
+    SKIP_DOWNLOAD=true
+  ;;
+  --configure)
+    SKIP_DOWNLOAD=true
+    SKIP_MAKE=true
+  ;;
+  --make)
+    SKIP_DOWNLOAD=true
+    SKIP_CONFIGURE=true
+  ;;
+  --nomake)
+    SKIP_MAKE=true
+  ;;
+  *)
+    _exit
   ;;
 esac
 
@@ -94,33 +128,47 @@ _init() {
 
 _x264() {
 
-  INFO "[x264] Downloading sources"
-  curl $X264_SOURCE -o last_stable_x264.tar.bz2
+  if [ $SKIP_DOWNLOAD = false ]; then
 
-  INFO "[x264] Extracting sources"
-  tar -C . -xf last_stable_x264.tar.bz2
+    INFO "[x264] Downloading sources"
+    curl $X264_SOURCE -o last_stable_x264.tar.bz2
+
+    INFO "[x264] Extracting sources"
+    tar -C . -xf last_stable_x264.tar.bz2
+
+  fi
 
   cd x264-*
 
-  INFO "[x264] Configuring"
-  ./configure --disable-avs \
-              --disable-cli \
-              --disable-ffms \
-              --disable-gpac \
-              --disable-lavf \
-              --disable-opencl \
-              --disable-swscale \
-              --enable-static \
-              --prefix=../../
+  if [ $SKIP_CONFIGURE = false ]; then
 
-  INFO "[x264] Compiling"
-  make -j$THREADS
+    INFO "[x264] Configuring"
+    ./configure --disable-avs     \
+                --disable-cli     \
+                --disable-ffms    \
+                --disable-gpac    \
+                --disable-lavf    \
+                --disable-lsmash  \
+                --disable-opencl  \
+                --disable-swscale \
+                --enable-static   \
+                --enable-strip    \
+                --prefix=../../
 
-  INFO "[x264] Installing"
-  make install
+  fi
 
-  INFO "[x264] Cleaning"
-  make clean
+  if [ $SKIP_MAKE = false ]; then
+
+    INFO "[x264] Compiling"
+    make -j$THREADS
+
+    INFO "[x264] Installing"
+    make install
+
+    INFO "[x264] Cleaning"
+    make clean
+
+  fi
 
   cd ..
 
@@ -130,61 +178,59 @@ _x264() {
 
 _ffmpeg() {
 
-  INFO "[ffmpeg] Downloading sources"
-  curl $FFMPEG_SOURCE -o ffmpeg-$FFMPEG_VERSION.tar.bz2
+   if [ $SKIP_DOWNLOAD = false ]; then
 
-  INFO "[ffmpeg] Extracting sources"
-  tar -C . -xf ffmpeg-$FFMPEG_VERSION.tar.bz2
+     INFO "[ffmpeg] Downloading sources"
+     curl $FFMPEG_SOURCE -o ffmpeg-$FFMPEG_VERSION.tar.bz2
+
+     INFO "[ffmpeg] Extracting sources"
+     tar -C . -xf ffmpeg-$FFMPEG_VERSION.tar.bz2
+
+  fi
 
   cd ffmpeg-*
 
-  INFO "[ffmpeg] Configuring"
-  ./configure --cc="gcc -Wl,--as-needed" \
-              --enable-avfilter \
-              --enable-gpl \
-              --enable-gray \
-              --enable-libx264 \
-              --enable-pthreads \
-              --enable-runtime-cpudetect \
-              --enable-static \
-              --enable-stripping \
-              --enable-zlib \
-              --extra-cflags="-I../../include" \
-              --extra-ldflags="-pthread -static-libgcc -L../../lib -lx264" \
-              --disable-bzlib \
-              --disable-doc \
-              --disable-ffplay \
-              --disable-ffprobe \
-              --disable-ffserver \
-              --disable-indev=alsa \
-              --disable-indev=jack \
-              --disable-indev=lavfi \
-              --disable-indev=sdl \
-              --disable-libgsm \
-              --disable-libspeex \
-              --disable-libfaac \
-              --disable-librtmp \
-              --disable-libopencore-amrnb \
-              --disable-libopencore-amrwb \
-              --disable-libdc1394 \
-              --disable-nonfree \
-              --disable-outdev=alsa \
-              --disable-outdev=sdl \
-              --disable-outdev=xv \
-              --disable-postproc \
-              --disable-vaapi \
-              --disable-vdpau \
-              --disable-version3 \
-              --prefix=../../
+  if [ $SKIP_CONFIGURE = false ]; then
 
-  INFO "[ffmpeg] Compiling"
-  make -j$THREADS
+    INFO "[ffmpeg] Configuring"
+    ./configure --cc="gcc -Wl,--as-needed" \
+                --enable-gpl \
+                --enable-gray \
+                --enable-libx264 \
+                --enable-pthreads \
+                --enable-runtime-cpudetect \
+                --enable-static \
+                --enable-stripping \
+                --enable-zlib \
+                --extra-cflags="-I../../include" \
+                --extra-ldflags="-pthread -static-libgcc -L../../lib" \
+                --extra-libs="-lx264" \
+                --disable-avdevice \
+                --disable-bzlib \
+                --disable-doc \
+                --disable-indevs \
+                --disable-nonfree \
+                --disable-outdevs \
+                --disable-postproc \
+                --disable-programs \
+                --disable-swresample \
+                --disable-version3 \
+                --prefix=../../
 
-  INFO "[ffmpeg] Installing"
-  make install
+  fi
 
-  INFO "[ffmpeg] Cleaning"
-  make clean
+  if [ $SKIP_MAKE = false ]; then
+
+    INFO "[ffmpeg] Compiling"
+    make -j$THREADS
+
+    INFO "[ffmpeg] Installing"
+    make install
+
+    INFO "[ffmpeg] Cleaning"
+    make clean
+
+  fi
 
   cd ..
 
@@ -194,80 +240,97 @@ _ffmpeg() {
 
 _qt5() {
 
- INFO "[qt5] Downloading sources"
- curl $QT5_SOURCE -o qt-$QT5_VERSION.tar.gz
+  if [ $SKIP_DOWNLOAD = false ]; then
 
- INFO "[qt5] Extracting sources"
- tar -C . -xf qt-$QT5_VERSION.tar.gz
+    INFO "[qt5] Downloading sources"
+    curl $QT5_SOURCE -o qt-$QT5_VERSION.tar.gz
+
+    INFO "[qt5] Extracting sources"
+    tar -C . -xf qt-$QT5_VERSION.tar.gz
+
+  fi
 
   cd qt-everywhere-*
 
-  INFO "[qt5] Configuring"
-  ./configure -confirm-license \
-              -nomake examples \
-              -nomake tests \
-              -nomake tools \
-              -no-qml-debug \
-              -no-sql-db2 \
-              -no-sql-ibase \
-              -no-sql-mysql \
-              -no-sql-oci \
-              -no-sql-odbc \
-              -no-sql-psql \
-              -no-sql-sqlite \
-              -no-sql-sqlite2 \
-              -no-sql-tds \
-              -no-gtkstyle \
-              -opensource \
-              -prefix ../../../ \
-              -qt-xcb \
-              -qt-libjpeg \
-              -qt-libpng \
-              -qt-zlib \
-              -qt-xkbcommon \
-              -qt-freetype \
-              -qt-pcre \
-              -qt-harfbuzz \
-              -silent \
-              -skip qtandroidextras \
-              -skip qtmacextras \
-              -skip qtx11extras \
-              -skip qtsvg \
-              -skip qtxmlpatterns \
-              -skip qtdeclarative \
-              -skip qtquickcontrols \
-              -skip qtmultimedia \
-              -skip qtwinextras \
-              -skip qtactiveqt \
-              -skip qtlocation \
-              -skip qtsensors \
-              -skip qtconnectivity \
-              -skip qtwebsockets \
-              -skip qtwebchannel \
-              -skip qtwebkit \
-              -skip qttools \
-              -skip qtwebkit-examples \
-              -skip qtimageformats \
-              -skip qtgraphicaleffects \
-              -skip qtscript \
-              -skip qtquick1 \
-              -skip qtwayland \
-              -skip qtserialport \
-              -skip qtenginio \
-              -skip qtwebengine \
-              -skip qttranslations \
-              -skip qtdoc \
-              -static
+  if [ $SKIP_CONFIGURE = false ]; then
 
+    INFO "[qt5] Configuring"
+    ./configure -confirm-license          \
+                -fontconfig               \
+                -glib                     \
+                -gtkstyle                 \
+                -icu                      \
+                -nomake examples          \
+                -nomake tests             \
+                -nomake tools             \
+                -no-cups                  \
+                -no-qml-debug             \
+                -no-sql-db2               \
+                -no-sql-ibase             \
+                -no-sql-mysql             \
+                -no-sql-oci               \
+                -no-sql-odbc              \
+                -no-sql-psql              \
+                -no-sql-sqlite            \
+                -no-sql-sqlite2           \
+                -no-sql-tds               \
+                -opengl                   \
+                -opensource               \
+                -prefix ../../../         \
+                -qt-libjpeg               \
+                -qt-libpng                \
+                -qt-zlib                  \
+                -qt-xkbcommon             \
+                -qt-pcre                  \
+                -qt-harfbuzz              \
+                -silent                   \
+                -skip qtandroidextras     \
+                -skip qtmacextras         \
+                -skip qtx11extras         \
+                -skip qtsvg               \
+                -skip qtxmlpatterns       \
+                -skip qtdeclarative       \
+                -skip qtquickcontrols     \
+                -skip qtmultimedia        \
+                -skip qtwinextras         \
+                -skip qtactiveqt          \
+                -skip qtlocation          \
+                -skip qtsensors           \
+                -skip qtconnectivity      \
+                -skip qtwebsockets        \
+                -skip qtwebchannel        \
+                -skip qtwebkit            \
+                -skip qttools             \
+                -skip qtwebkit-examples   \
+                -skip qtimageformats      \
+                -skip qtgraphicaleffects  \
+                -skip qtscript            \
+                -skip qtquick1            \
+                -skip qtwayland           \
+                -skip qtserialport        \
+                -skip qtenginio           \
+                -skip qtwebengine         \
+                -skip qttranslations      \
+                -skip qtdoc               \
+                -static                   \
+                -system-freetype          \
+                -system-xcb               \
+                -warnings-are-errors
 
-  INFO "[qt5] Compiling"
-  make -j$THREADS
+  fi
 
-  INFO "[qt5] Installing"
-  make install
+  if [ $SKIP_MAKE = false ]; then
 
-  INFO "[qt5] Cleaning"
-  make clean
+    INFO "[qt5] Compiling"
+    make -j$THREADS
+
+    INFO "[qt5] Installing"
+    make install
+
+    INFO "[qt5] Cleaning"
+    make clean
+
+  fi
 
   cd ..
 
@@ -277,14 +340,14 @@ _qt5() {
 
 _init
 
-if [ $X264_SKIP = false ]; then
+if [ $SKIP_X264 = false ]; then
   _x264
 fi
 
-if [ $FFMPEG_SKIP = false ]; then
+if [ $SKIP_FFMPEG = false ]; then
   _ffmpeg
 fi
 
-if [ $QT5_SKIP = false ]; then
+if [ $SKIP_QT5 = false ]; then
   _qt5
 fi
