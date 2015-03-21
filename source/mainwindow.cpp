@@ -156,11 +156,13 @@ void MainWindow::on_actionCycleFramerates_triggered()
             new_rate_label = "25p (PAL/SECAM TV equivalent)";
             break;
 
+        case ZEIT_RATE_23_976:  // Hidden but might be included in interface later
         case ZEIT_RATE_25p:
             new_rate = ZEIT_RATE_30p;
             new_rate_label = "30p (NTSC TV equivalent)";
             break;
 
+        case ZEIT_RATE_29_97:   // Hidden but might be included in interface later
         case ZEIT_RATE_30p:
             new_rate = ZEIT_RATE_48p;
             new_rate_label = "48p (Cinema HFR equivalent)";
@@ -177,15 +179,10 @@ void MainWindow::on_actionCycleFramerates_triggered()
             break;
 
         case ZEIT_RATE_60p:
+        default:
             new_rate = ZEIT_RATE_24p;
             new_rate_label = "24p (Cinema/Film equivalent)";
-            break;
-
-        // Hide akward special rates in the interface for now
-        // Can be considered for re-inclusion later
-        case ZEIT_RATE_23_976:
-        case ZEIT_RATE_29_97:
-            break;
+        break;
 
     }
 
@@ -344,6 +341,7 @@ void MainWindow::on_actionOpen_triggered()
         collator.setCaseSensitivity(Qt::CaseInsensitive);
 
         std::sort(files.begin(), files.end(), [&](const QFileInfo& a, const QFileInfo& b) {
+
             return collator.compare(a.baseName(), b.baseName()) < 0;
         });
 

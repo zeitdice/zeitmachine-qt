@@ -2,6 +2,8 @@ linux {
 
     CONFIG(debug, debug|release) {
 
+        INCLUDEPATH +=  /usr/include/ffmpeg
+
         LIBS += -lavfilter      \
                 -lavformat      \
                 -lavcodec       \
@@ -11,23 +13,16 @@ linux {
 
     } else {
 
-        INCLUDEPATH +=  deps/include
+        INCLUDEPATH +=  ../qtapp/dependencies/installed/ffmpeg-2.6.1/include                       \
+                        ../qtapp/dependencies/installed/qt-everywhere-opensource-src-5.4.1/include \
+                        ../qtapp/dependencies/installed/x264-snapshot-20141218-2245-stable/include
 
-        QMAKE_LIBDIR += deps/lib \
-                        deps/plugins/platforms
+        QMAKE_LIBDIR += ../qtapp/dependencies/installed/ffmpeg-2.6.1/lib                                            \
+                        ../qtapp/dependencies/installed/qt-everywhere-opensource-src-5.4.1/lib                      \
+                        ../qtapp/dependencies/installed/qt-everywhere-opensource-src-5.4.1/plugins/platforms        \
+                        ../qtapp/dependencies/installed/qt-everywhere-opensource-src-5.4.1/plugins/platformthemes   \
+                        ../qtapp/dependencies/installed/x264-snapshot-20141218-2245-stable/lib
 
-        LIBS += -lavfilter      \
-                -lavformat      \
-                -lavcodec       \
-                -lswresample    \
-                -lswscale       \
-                -lavutil        \
-                -lz             \
-                -lx264          \
-                -lQt5OpenGL     \
-                -lQt5Widgets    \
-                -lQt5Gui        \
-                -lQt5Core       \
         LIBS += -static-libgcc      \
                 -static-libstdc++   \
                 -lavfilter          \
@@ -41,7 +36,8 @@ linux {
                 -lQt5Widgets        \
                 -lQt5Gui            \
                 -lQt5Core           \
-                -lqxcb
+                -lqxcb              \
+                -lqgtk2
 
     }
 

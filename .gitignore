@@ -2,7 +2,7 @@
 *.pro.user*
 
 # Ignore dependencies obtained with the platform build scripts
-deps/
+dependencies/
 
 # Ignore documentation folders generated with Doxygen
 html/

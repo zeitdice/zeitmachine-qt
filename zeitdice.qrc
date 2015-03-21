@@ -1,7 +1,4 @@
 <RCC>
-    <qresource prefix="/about">
-        <file>splash.png</file>
-    </qresource>
     <qresource prefix="/icons">
         <file>icons/adjust.png</file>
         <file>icons/adn.png</file>
