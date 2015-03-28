@@ -266,7 +266,7 @@ void MainWindow::on_actionMovie_triggered()
     QString export_file = QFileDialog::getSaveFileName(this,
                                                        "Choose an output file name and location",
                                                        QFileInfo(persistent_open_dir, "export.h264").absoluteFilePath(),
-                                                       "Raw H.264 Stream (*.h264)", // ;;MPEG-4/H.264 (*.mp4)
+                                                       "MPEG-4/H.264 (*.mp4);;Matroska/H.264 (*.mkv);;Quicktime/H.264 (*.mov)",
                                                        0,
                                                        QFileDialog::DontResolveSymlinks);
 

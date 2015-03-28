@@ -806,95 +806,174 @@ void ZeitEngine::FreeRescaler()
 void ZeitEngine::InitExporter(AVFrame* frame, const QFileInfo output_file)
 {
     int ret;
-    encoder_output_file = new std::ofstream;
 
-    if( !(encoder_codec = avcodec_find_encoder(EXPORT_CODEC_ID)) ) {
-        av_log(NULL, AV_LOG_ERROR, "Codec not found\n");
-        exit(1);
+    try {
+        avformat_alloc_output_context2(&output_format_context,
+                                       NULL,
+                                       NULL,
+                                       output_file.absoluteFilePath().toUtf8().data());
+
+        if(!output_format_context) {
+            throw("Could not allocate output context");
+        }
+
+        output_format = output_format_context->oformat;
+
+//        encoder_output_file = new std::ofstream;
+
+        output_codec = avcodec_find_encoder(EXPORT_CODEC_ID);
+
+        if(!output_codec) {
+            throw("Output codec not found");
+        }
+
+        output_stream = avformat_new_stream(output_format_context, output_codec);
+
+        if(!output_stream) {
+            throw("Could not allocate output stream");
+        }
+
+        output_stream->id = output_format_context->nb_streams - 1;
+
+        output_codec_context = output_stream->codec;
+
+        output_codec_context->codec_id = output_format->video_codec;
+        output_codec_context->bit_rate = 25000000;
+
+//        output_codec_context = avcodec_alloc_context3(output_encoder)
+//        if(!output_codec_context) {
+//            throw("Could not allocate video codec context");
+//        }
+
+        output_codec_context->bit_rate = 25000000;
+
+        control_mutex.lock();
+        if(rotate_90d_cw_flag) {
+            output_codec_context->width = frame->height;
+            output_codec_context->height = frame->width;
+        } else {
+            output_codec_context->width = frame->width;
+            output_codec_context->height = frame->height;
+        }
+        control_mutex.unlock();
+
+        switch(configured_framerate) {
+
+            case ZEIT_RATE_23_976:
+                output_stream->time_base = (AVRational){1001, 30000};
+                break;
+
+            case ZEIT_RATE_29_97:
+                output_stream->time_base = (AVRational){125, 2997};
+                break;
+
+            default:
+                output_stream->time_base = (AVRational){1, configured_framerate};
+                break;
+        }
+
+        output_codec_context->time_base = output_stream->time_base;
+        output_codec_context->gop_size = 10;
+//        output_codec_context->max_b_frames = 1; Not from muxing.c reference
+        output_codec_context->pix_fmt = EXPORT_PIXELFORMAT;
+
+        if (output_codec_context->codec_id == AV_CODEC_ID_MPEG2VIDEO) {
+            /* just for testing, we also add B frames */
+            output_codec_context->max_b_frames = 2;
+        }
+        if (output_codec_context->codec_id == AV_CODEC_ID_MPEG1VIDEO) {
+            /* Needed to avoid using macroblocks in which some coeffs overflow.
+             * This does not happen with normal video, it just happens here as
+             * the motion of the chroma plane does not match the luma plane. */
+            output_codec_context->mb_decision = 2;
+        }
+
+//        if(EXPORT_CODEC_ID == AV_CODEC_ID_H264) {
+//            /* ??? Not from muxing.c reference, maybe outdated or wrong */
+//            av_opt_set(output_codec_context->priv_data, "preset", "slow", 0);
+//        }
+
+        /* Some formats want stream headers to be separate. */
+        if(output_format_context->oformat->flags & AVFMT_GLOBALHEADER) {
+            output_codec_context->flags |= CODEC_FLAG_GLOBAL_HEADER;
+        }
+
+        output_options = NULL;
+
+        ret = avcodec_open2(output_codec_context, output_codec, &output_options);
+
+        av_dict_free(&output_options);
+
+        if(ret < 0) {
+            throw("Could not open output video codec");
+        }
+
+//        // Open encoder codec
+//        if( avcodec_open2(output_codec_context, output_codec, NULL) < 0 ) {
+//            av_log(NULL, AV_LOG_ERROR, "Could not open codec\n");
+//            exit(1);
+//        }
+
+//        encoder_output_file->open(output_file.absoluteFilePath().toUtf8().data(), std::ios::out | std::ios::binary);
+//        if ( !encoder_output_file->is_open() ) {
+//            av_log(NULL, AV_LOG_ERROR, "Could not open input file '%s'\n", output_file.absoluteFilePath().toUtf8().data());
+//            exit(1);
+//        }
+
+        // HEADS UP: muxing.c uses AVPicture !!!
+        output_frame = av_frame_alloc();
+
+        if (!output_frame) {
+            throw("Could not allocate video output frame");
+        }
+
+        output_frame->format = output_codec_context->pix_fmt;
+        output_frame->width = output_codec_context->width;
+        output_frame->height = output_codec_context->height;
+
+        // The image can be allocated by any means and av_image_alloc() is just the most convenient way if av_malloc() is to be used
+        if( (ret = av_image_alloc(output_frame->data, output_frame->linesize, output_codec_context->width, output_codec_context->height, output_codec_context->pix_fmt, 1)) < 0) {
+            fprintf(stderr, "Could not allocate raw picture buffer\n");
+            exit(1);
+        }
+        // END HEADS UP
+
+        if(!(output_format->flags & AVFMT_NOFILE)) {
+            ret = avio_open(&output_format_context->pb,
+                            output_file.absoluteFilePath().toUtf8().data(),
+                            AVIO_FLAG_WRITE);
+
+            if(ret < 0) {
+                throw("Could not open output file");
+            }
+        }
+
+        ret = avformat_write_header(output_format_context, &output_options);
+
+        if(ret < 0) {
+            throw("An error occured during writing the stream header");
+        }
+
+        // Possibly elsewhere, legacy code: encoder_packet = new AVPacket;
     }
-
-    if( !(encoder_codec_context = avcodec_alloc_context3(encoder_codec)) ) {
-        av_log(NULL, AV_LOG_ERROR, "Could not allocate video codec context\n");
-        exit(1);
+    catch(...) {
+        return;
     }
-
-    encoder_codec_context->bit_rate = 25000000;
-
-    control_mutex.lock();
-    if(rotate_90d_cw_flag) {
-        encoder_codec_context->width = frame->height;
-        encoder_codec_context->height = frame->width;
-    } else {
-        encoder_codec_context->width = frame->width;
-        encoder_codec_context->height = frame->height;
-    }
-    control_mutex.unlock();
-
-    switch(configured_framerate) {
-
-        case ZEIT_RATE_23_976:
-            encoder_codec_context->time_base = (AVRational){1001, 30000};
-            break;
-
-        case ZEIT_RATE_29_97:
-            encoder_codec_context->time_base = (AVRational){125, 2997};
-            break;
-
-        default:
-            encoder_codec_context->time_base = (AVRational){1, configured_framerate};
-            break;
-    }
-
-    encoder_codec_context->gop_size = 10; // Emit one intra frame every ten frames
-    encoder_codec_context->max_b_frames = 1;
-    encoder_codec_context->pix_fmt = (AVPixelFormat)frame->format;
-
-    if(EXPORT_CODEC_ID == AV_CODEC_ID_H264) {
-        av_opt_set(encoder_codec_context->priv_data, "preset", "slow", 0);
-    }
-
-    // Open encoder codec
-    if( avcodec_open2(encoder_codec_context, encoder_codec, NULL) < 0 ) {
-        av_log(NULL, AV_LOG_ERROR, "Could not open codec\n");
-        exit(1);
-    }
-
-    encoder_output_file->open(output_file.absoluteFilePath().toUtf8().data(), std::ios::out | std::ios::binary);
-    if ( !encoder_output_file->is_open() ) {
-        av_log(NULL, AV_LOG_ERROR, "Could not open input file '%s'\n", output_file.absoluteFilePath().toUtf8().data());
-        exit(1);
-    }
-
-    if ( !(encoder_frame = av_frame_alloc()) ) {
-        av_log(NULL, AV_LOG_ERROR, "Could not allocate video frame\n");
-        exit(1);
-    }
-
-    encoder_frame->format = encoder_codec_context->pix_fmt;
-    encoder_frame->width = encoder_codec_context->width;
-    encoder_frame->height = encoder_codec_context->height;
-
-    // The image can be allocated by any means and av_image_alloc() is just the most convenient way if av_malloc() is to be used
-    if( (ret = av_image_alloc(encoder_frame->data, encoder_frame->linesize, encoder_codec_context->width, encoder_codec_context->height, encoder_codec_context->pix_fmt, 1)) < 0) {
-        fprintf(stderr, "Could not allocate raw picture buffer\n");
-        exit(1);
-    }
-
-    encoder_packet = new AVPacket;
 }
 
 void ZeitEngine::ExportFrame(AVFrame* frame, const QFileInfo output_file)
 {
+    // BOILERPLATE
+
+    int got_output_packet = 0;
+    int ret;
+
     if(!exporter_initialized) {
         InitExporter(frame, output_file);
         exporter_initialized = true;
     }
 
-    int got_output;
-
-    av_init_packet(encoder_packet);
-    encoder_packet->data = NULL; // Packet data will be allocated by the encoder
-    encoder_packet->size = 0;
+    // COPY IMAGE TO OUTPUT FRAME
 
     control_mutex.lock();
     bool flip_x = flip_x_flag;
@@ -912,11 +991,11 @@ void ZeitEngine::ExportFrame(AVFrame* frame, const QFileInfo output_file)
             if(flip_y != rotate_90d_cw) { target_y = frame->height - 1 - y; }
 
             if(rotate_90d_cw) {
-                memcpy(encoder_frame->data[0] + target_x * encoder_frame->linesize[0] + target_y,
+                memcpy(output_frame->data[0] + target_x * output_frame->linesize[0] + target_y,
                        frame->data[0] + y * frame->linesize[0] + x,
                        sizeof(uint8_t));
             } else {
-                memcpy(encoder_frame->data[0] + target_y * encoder_frame->linesize[0] + target_x,
+                memcpy(output_frame->data[0] + target_y * output_frame->linesize[0] + target_x,
                        frame->data[0] + y * frame->linesize[0] + x,
                        sizeof(uint8_t));
             }
@@ -935,11 +1014,11 @@ void ZeitEngine::ExportFrame(AVFrame* frame, const QFileInfo output_file)
             // (Iterate over Cb and Cr Plane)
             for(int p = 1; p < 3; p++) {
                 if(rotate_90d_cw) {
-                    memcpy(encoder_frame->data[p] + target_x * encoder_frame->linesize[p] + target_y,
+                    memcpy(output_frame->data[p] + target_x * output_frame->linesize[p] + target_y,
                            frame->data[p] + y * frame->linesize[p] + x,
                            sizeof(uint8_t));
                 } else {
-                    memcpy(encoder_frame->data[p] + target_y * encoder_frame->linesize[p] + target_x,
+                    memcpy(output_frame->data[p] + target_y * output_frame->linesize[p] + target_x,
                            frame->data[p] + y * frame->linesize[p] + x,
                            sizeof(uint8_t));
                 }
@@ -947,49 +1026,104 @@ void ZeitEngine::ExportFrame(AVFrame* frame, const QFileInfo output_file)
         }
     }
 
-    encoder_frame->pts = sequence_iterator - source_sequence.constBegin();
+    // SE BOILERPLATE AGAIN
 
-    // Encode the image
-    if( avcodec_encode_video2(encoder_codec_context, encoder_packet, encoder_frame, &got_output) < 0 ) {
-        fprintf(stderr, "Error encoding frame\n");
-        exit(1);
+    output_frame->pts = sequence_iterator - source_sequence.constBegin();
+
+    if(output_format_context->oformat->flags & AVFMT_RAWPICTURE) {
+        AVPacket output_packet;
+        av_init_packet(&output_packet);
+
+        output_packet.flags |= AV_PKT_FLAG_KEY;
+        output_packet.stream_index = output_stream->index;
+        output_packet.data = (uint8_t *)output_frame;
+        output_packet.size = sizeof(AVPicture); // Does this conflict with my AVFrame solution (remember: muxing.c uses an AVPicture)
+
+        output_packet.pts = output_packet.dts = output_frame->pts;
+
+        av_packet_rescale_ts(&output_packet,
+                             output_codec_context->time_base,
+                             output_stream->time_base);
+
+        ret = av_interleaved_write_frame(output_format_context, &output_packet);
+    } else {
+        AVPacket output_packet = { 0 };
+        av_init_packet(&output_packet);
+
+        ret = avcodec_encode_video2(output_codec_context,
+                                    &output_packet,
+                                    output_frame,
+                                    &got_output_packet);
+
+        if(ret < 0) {
+            throw("Error encoding output video frame");
+        }
+
+        if(got_output_packet) {
+            av_packet_rescale_ts(&output_packet,
+                                 output_codec_context->time_base,
+                                 output_stream->time_base);
+
+            output_packet.stream_index = output_stream->index;
+
+            ret = av_interleaved_write_frame(output_format_context,
+                                             &output_packet);
+        } else {
+            ret = 0;
+        }
     }
 
-    if(got_output) {
-        encoder_output_file->write(reinterpret_cast<char *>(encoder_packet->data), encoder_packet->size);
-        //av_freep(&encoder_packet->data);
-        av_free_packet(encoder_packet);
+    if(ret < 0) {
+        char t[1024];
+        av_make_error_string(t, 1024, ret);
+
+        throw("Error while writing output video frame");
     }
+
+//    return (frame || got_packet) ? 0 : 1; In muxing.c this is what is returned
+
 }
 
 void ZeitEngine::CloseExport()
 {
-    uint8_t endcode[] = { 0, 0, 1, 0xb7 };
-    int got_output = 1;
+    av_write_trailer(output_format_context);
 
-    // Get the delayed frames
-    while(got_output) {
-        if( avcodec_encode_video2(encoder_codec_context, encoder_packet, NULL, &got_output) < 0 ) {
-            fprintf(stderr, "Error encoding frame\n");
-            exit(1);
-        }
+    avcodec_close(output_codec_context);
 
-        if (got_output) {
-            printf("Write delayed frame (size=%5d)\n", encoder_packet->size);
-            encoder_output_file->write(reinterpret_cast<char *>(encoder_packet->data), encoder_packet->size);
-            av_free_packet(encoder_packet);
-        }
+    if(!(output_format->flags & AVFMT_NOFILE)) {
+        avio_closep(&output_format_context->pb);
     }
 
-    // add sequence end code to have a real mpeg file
-    //av_image_alloc(outputFrame->data, outputFrame->linesize, outputCodecContext->width, outputCodecContext->height, outputCodecContext->pix_fmt, 32)
-    encoder_output_file->write(reinterpret_cast<char *>(endcode), sizeof(endcode));
-    encoder_output_file->close();
+    avformat_free_context(output_format_context);
 
-    avcodec_close(encoder_codec_context);
-    av_free(encoder_codec_context);         // Possibly double freeing
-    av_freep(&encoder_frame->data[0]);
-    av_frame_free(&encoder_frame);
+//    SUCH LEGACY
+//    uint8_t endcode[] = { 0, 0, 1, 0xb7 };
+//    int got_output = 1;
+
+//    // Get the delayed frames
+//    while(got_output) {
+//        if( avcodec_encode_video2(output_codec_context, encoder_packet, NULL, &got_output) < 0 ) {
+//            fprintf(stderr, "Error encoding frame\n");
+//            exit(1);
+//        }
+
+//        if (got_output) {
+//            printf("Write delayed frame (size=%5d)\n", encoder_packet->size);
+//            encoder_output_file->write(reinterpret_cast<char *>(encoder_packet->data), encoder_packet->size);
+//            av_free_packet(encoder_packet);
+//        }
+//    }
+
+//    // add sequence end code to have a real mpeg file
+//    //av_image_alloc(outputFrame->data, outputFrame->linesize, outputCodecContext->width, outputCodecContext->height, outputCodecContext->pix_fmt, 32)
+//    encoder_output_file->write(reinterpret_cast<char *>(endcode), sizeof(endcode));
+//    encoder_output_file->close();
+
+//    avcodec_close(output_codec_context);
+//    av_free(output_codec_context);
+
+    av_freep(&output_frame->data[0]);
+    av_frame_free(&output_frame);
 
     exporter_initialized = false;
 

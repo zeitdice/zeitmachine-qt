@@ -129,11 +129,16 @@ class ZeitEngine : public QObject
 
     // Exporter members
 
-    AVCodec *encoder_codec;
-    AVCodecContext *encoder_codec_context;
-    AVFrame *encoder_frame;
+    AVCodec *output_codec;
+    AVCodecContext *output_codec_context;
+    AVFrame *output_frame;
     AVPacket *encoder_packet;
     std::ofstream* encoder_output_file;
+
+    AVDictionary* output_options;
+    AVFormatContext* output_format_context;
+    AVOutputFormat* output_format;
+    AVStream* output_stream;
 
     bool exporter_initialized;
 
