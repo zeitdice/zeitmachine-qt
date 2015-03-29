@@ -12,7 +12,18 @@ AboutDialog::AboutDialog(QWidget *parent) :
     text.append("<b>Version ");
     text.append(ZEITDICE_APPLICATION_VERSION);
     text.append("</b><br/><br/>");
-    text.append("<a href=\"http://www.zeitdice.com\">zeitdice.com</a>");
+
+    text.append("This application is free software, licensed under the");
+    text.append(" <a href=\"http://www.gnu.org/licenses/gpl-3.0.txt\">GNU General Public License, Version 3</a><br/>");
+    text.append("The full source code can be obtained as a downloadable package <a href=\"http://www.zeitdice.com/SOURCE_DISTRIBUTION_PACKAGE_GOES_HERE\">here</a><br/><br/>");
+
+    text.append("<b>The following third party technologies form part of this application:</b><br/><br/>");
+    text.append("Qt 5.4.1 Community/Open Source Edition");
+    text.append(" - <a href=\"http://www.gnu.org/licenses/gpl-3.0.txt\">GPLv3</a><br/>");
+    text.append("FFmpeg 2.6.1");
+    text.append(" - <a href=\"http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt\">GPLv2</a><br/><br/>");
+
+    text.append("Visit or contact us at <a href=\"http://www.zeitdice.com\">zeitdice.com</a>");
 
     this->ui->aboutLabel->setText(text);
 }
