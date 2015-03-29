@@ -151,38 +151,38 @@ void MainWindow::on_actionCycleFramerates_triggered()
 
     switch(zeitengine->configured_framerate) {
 
-        case ZEIT_RATE_24p:
-            new_rate = ZEIT_RATE_25p;
-            new_rate_label = "25p (PAL/SECAM TV equivalent)";
-            break;
-
-        case ZEIT_RATE_23_976:  // Hidden but might be included in interface later
-        case ZEIT_RATE_25p:
-            new_rate = ZEIT_RATE_30p;
-            new_rate_label = "30p (NTSC TV equivalent)";
-            break;
-
-        case ZEIT_RATE_29_97:   // Hidden but might be included in interface later
-        case ZEIT_RATE_30p:
-            new_rate = ZEIT_RATE_48p;
-            new_rate_label = "48p (Cinema HFR equivalent)";
-            break;
-
-        case ZEIT_RATE_48p:
-            new_rate = ZEIT_RATE_50p;
-            new_rate_label = "50p (Next-Gen HDTV equivalent)";
-            break;
-
-        case ZEIT_RATE_50p:
-            new_rate = ZEIT_RATE_60p;
-            new_rate_label = "60p (Next-Gen HDTV equivalent)";
-            break;
-
-        case ZEIT_RATE_60p:
-        default:
-            new_rate = ZEIT_RATE_24p;
-            new_rate_label = "24p (Cinema/Film equivalent)";
+    case ZEIT_RATE_24p:
+        new_rate = ZEIT_RATE_25p;
+        new_rate_label = "25p (PAL/SECAM TV equivalent)";
         break;
+
+    case ZEIT_RATE_23_976:  // Hidden but might be included in interface later
+    case ZEIT_RATE_25p:
+        new_rate = ZEIT_RATE_30p;
+        new_rate_label = "30p (NTSC TV equivalent)";
+        break;
+
+    case ZEIT_RATE_29_97:   // Hidden but might be included in interface later
+    case ZEIT_RATE_30p:
+        new_rate = ZEIT_RATE_48p;
+        new_rate_label = "48p (Cinema HFR equivalent)";
+        break;
+
+    case ZEIT_RATE_48p:
+        new_rate = ZEIT_RATE_50p;
+        new_rate_label = "50p (Next-Gen HDTV equivalent)";
+        break;
+
+    case ZEIT_RATE_50p:
+        new_rate = ZEIT_RATE_60p;
+        new_rate_label = "60p (Next-Gen HDTV equivalent)";
+        break;
+
+    case ZEIT_RATE_60p:
+    default:
+        new_rate = ZEIT_RATE_24p;
+        new_rate_label = "24p (Cinema/Film equivalent)";
+    break;
 
     }
 
@@ -263,22 +263,66 @@ void MainWindow::EnableControls(const bool lock)
 
 void MainWindow::on_actionMovie_triggered()
 {
-    QString export_file = QFileDialog::getSaveFileName(this,
-                                                       "Choose an output file name and location",
-                                                       QFileInfo(persistent_open_dir, "export.h264").absoluteFilePath(),
-                                                       "MPEG-4/H.264 (*.mp4);;Matroska/H.264 (*.mkv);;Quicktime/H.264 (*.mov)",
-                                                       0,
-                                                       QFileDialog::DontResolveSymlinks);
+    QHash<QString, QString> video_extension_filters;
 
-    if(!export_file.isEmpty()) {
+    video_extension_filters["mp4"] = "MPEG-4 [.mp4] - Recommended Format (*.mp4)";
+    video_extension_filters["mkv"] = "Matroska [.mkv] (*.mkv)";
+    video_extension_filters["mov"] = "Quicktime [.mov] (*.mov)";
 
-        EnableControls(false);
+    QFileDialog dialog(this);
 
-        zeitengine->control_mutex.lock();
-        zeitengine->stop_flag = true;
-        zeitengine->control_mutex.unlock();
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setDirectory(persistent_open_dir);
+    dialog.setFileMode(QFileDialog::AnyFile);
+    dialog.setLabelText(QFileDialog::Accept, "Export");
+    dialog.setNameFilters(video_extension_filters.values());
+    dialog.setNameFilterDetailsVisible(true);
+    dialog.setOption(QFileDialog::HideNameFilterDetails, false);
+    dialog.setOption(QFileDialog::DontConfirmOverwrite, true);
+    dialog.setViewMode(QFileDialog::Detail);
+    dialog.setWindowTitle("Choose an export filename and location");
 
-        emit ExportSignal(QFileInfo(export_file));
+    dialog.selectFile("export.mp4");
+    dialog.selectNameFilter(video_extension_filters["mp4"]);
+
+    if(dialog.exec()) {
+        QString export_file = dialog.selectedFiles()[0];
+        QString export_format = dialog.selectedNameFilter();
+
+        if(!export_file.isEmpty()) {
+            QStringList extensions(video_extension_filters.keys());
+            QString ext_str = "\\.(?:" + extensions.join("|") + ")";
+            QRegularExpression rx("(" + ext_str + "$|(?<!" + ext_str + ")$)");
+
+            export_file.replace(rx, "." + video_extension_filters.key(export_format));
+
+            QFileInfo export_fileinfo(export_file);
+
+            if(export_fileinfo.exists()) {
+                QMessageBox confirmation(this);
+                QPushButton* abort = confirmation.addButton("Don't overwrite",
+                                                            QMessageBox::RejectRole);
+
+                confirmation.addButton("Overwrite anyway", QMessageBox::AcceptRole);
+                confirmation.setDefaultButton(abort);
+                confirmation.setWindowTitle("Warning");
+                confirmation.setText("A file with this name already exists!");
+
+                confirmation.exec();
+
+                if((QPushButton*)confirmation.clickedButton() == abort) {
+                    return;
+                }
+            }
+
+            EnableControls(false);
+
+            zeitengine->control_mutex.lock();
+            zeitengine->stop_flag = true;
+            zeitengine->control_mutex.unlock();
+
+            emit ExportSignal(QFileInfo(export_file));
+        }
     }
 }
 
