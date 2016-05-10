@@ -8,7 +8,7 @@ DEPS="$SCRIPTS/../dependencies"
 INST="$DEPS/installed"
 SRC="$DEPS/sources"
 
-VERSION_FFMPEG="2.6.1"
+VERSION_FFMPEG="3.0.1"
 VERSION_QT="5.4.1"
 VERSION_X264="20141218-2245-stable"
 
@@ -157,7 +157,7 @@ if [ $SKIP_X264 = false ]; then
                 --disable-lsmash    \
                 --disable-opencl    \
                 --disable-swscale   \
-                --enable-static     \
+                --enable-shared     \
                 --enable-strip      \
                 --prefix=$INST_X264
 
@@ -214,12 +214,13 @@ if [ $SKIP_FFMPEG = false ]; then
                 --enable-libx264 \
                 --enable-pthreads \
                 --enable-runtime-cpudetect \
-                --enable-static \
-                --enable-stripping \
+                --enable-shared \
+		            --enable-stripping \
                 --enable-zlib \
                 --extra-cflags="-I$INST_X264/include" \
                 --extra-ldflags="-pthread -static-libgcc -L$INST_X264/lib" \
                 --extra-libs="-lx264" \
+                --disable-static \
                 --disable-avdevice \
                 --disable-bzlib \
                 --disable-doc \
