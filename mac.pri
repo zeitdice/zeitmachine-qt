@@ -1,6 +1,6 @@
 mac {
 
-    ICON = zeitdice.icns
+    ICON = zeitmachine.icns
 
     INCLUDEPATH += ../zeitmachine/dependencies/installed/ffmpeg-3.0.1/include
 
