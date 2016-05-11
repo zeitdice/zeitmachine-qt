@@ -3,13 +3,6 @@
 #include <QtPlugin>
 #include <QScreen>
 
-
-// Statically include platform plugin
-
-#if defined(Q_OS_WIN)
-Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
-#endif
-
 #if defined(Q_OS_LINUX) && defined(Q_NO_DEBUG)
 Q_IMPORT_PLUGIN(QGtk2ThemePlugin)
 Q_IMPORT_PLUGIN(QXcbIntegrationPlugin)

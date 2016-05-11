@@ -1,7 +1,10 @@
-win {
+win32 {
 
-    # Coming up as well
+   RC_ICONS = assets/zeitmachine.ico
 
-    RC_ICONS = zeitdice.ico
+   INCLUDEPATH += $$PWD/dependencies/ffmpeg-20160418-git-13406b6-win64-dev/include
+
+   LIBS += -L$$PWD/dependencies/ffmpeg-20160418-git-13406b6-win64-dev/lib \
+           -lavfilter -lavformat -lavcodec -lswscale -lavutil
 
 }
