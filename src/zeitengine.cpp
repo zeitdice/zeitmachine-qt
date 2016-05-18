@@ -100,7 +100,7 @@ void ZeitEngine::InitDecoder()
         }
     }
     catch(int code) {
-        av_log(NULL, AV_LOG_ERROR, "Return code was " + code);
+        av_log(NULL, AV_LOG_ERROR, "Return code was %d", code);
     }
 }
 
@@ -400,7 +400,7 @@ void ZeitEngine::DecodeFrame()
         }
 
         // Free decoder packet
-        av_free_packet(decoder_packet);
+        av_packet_unref(decoder_packet);
 
         // Convert deprecated pixel formats to favored ones
         // See http://stackoverflow.com/questions/23067722/swscaler-warning-deprecated-pixel-format-used
@@ -422,7 +422,7 @@ void ZeitEngine::DecodeFrame()
         }
     }
     catch(int code) {
-        av_log(NULL, AV_LOG_ERROR, "Return code was " + code);
+        av_log(NULL, AV_LOG_ERROR, "Return code was %d", code);
     }
 }
 
@@ -538,7 +538,7 @@ void ZeitEngine::InitFilter(AVFrame* frame, ZeitFilter filter)
     }
     catch(int code)
     {
-        av_log(NULL, AV_LOG_ERROR, "Return code was " + code);
+        av_log(NULL, AV_LOG_ERROR, "Return code was %d", code);
         return;
     }
 
@@ -661,7 +661,7 @@ void ZeitEngine::InitScaler(AVFrame *frame,
     }
     catch(int code)
     {
-        av_log(NULL, AV_LOG_ERROR, "Return code was " + code);
+        av_log(NULL, AV_LOG_ERROR, "Return code was %d", code);
         return;
     }
 }
@@ -766,7 +766,7 @@ void ZeitEngine::InitRescaler(AVFrame *frame,
     }
     catch(int code)
     {
-        av_log(NULL, AV_LOG_ERROR, "Return code was " + code);
+        av_log(NULL, AV_LOG_ERROR, "Return code was %d", code);
         return;
     }
 }
@@ -1047,7 +1047,7 @@ void ZeitEngine::ExportFrame(AVFrame* frame, const QFileInfo output_file)
 
         ret = av_interleaved_write_frame(output_format_context, &output_packet);
     } else {
-        AVPacket output_packet = { 0 };
+        AVPacket output_packet; // = { 0 }; probably unnecessary and incomplete allocation (buf is written by av_init_packet anyway
         av_init_packet(&output_packet);
 
         ret = avcodec_encode_video2(output_codec_context,
@@ -1110,7 +1110,7 @@ void ZeitEngine::CloseExport()
 //        if (got_output) {
 //            printf("Write delayed frame (size=%5d)\n", encoder_packet->size);
 //            encoder_output_file->write(reinterpret_cast<char *>(encoder_packet->data), encoder_packet->size);
-//            av_free_packet(encoder_packet);
+//            av_packet_unref(encoder_packet);
 //        }
 //    }
 
