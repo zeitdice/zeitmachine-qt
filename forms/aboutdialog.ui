@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>About Zeitdice QtApp</string>
+   <string>About zeitmachine</string>
   </property>
   <widget class="QLabel" name="aboutLabel">
    <property name="geometry">
