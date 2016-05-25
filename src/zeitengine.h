@@ -18,6 +18,7 @@
 #include <QThread>
 #include <QWaitCondition>
 
+#include <algorithm>
 #include <iostream>
 #include <fstream>
 

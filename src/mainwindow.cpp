@@ -11,7 +11,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->setupUi(this);
 
-    videoWidget = new GLVideoWidget;
+    videoWidget = new GLVideoWidget(this);
     this->setCentralWidget(videoWidget);
 
     progressbar = new QProgressBar;

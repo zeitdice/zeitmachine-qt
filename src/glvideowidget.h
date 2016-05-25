@@ -1,14 +1,20 @@
 #ifndef GLVIDEOWIDGET_H
 #define GLVIDEOWIDGET_H
 
+#include <QApplication>
 #include <QGLWidget>
 #include <QMutex>
 #include <QPixmap>
+#include <QStyle>
+#include <QScreen>
 
 class GLVideoWidget : public QGLWidget
 {
     Q_OBJECT
 
+    bool needsReposition;
+
+    QWidget* main_window;
     QPixmap pixmap;
     QRectF bounds;
 public:

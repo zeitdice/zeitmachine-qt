@@ -15,8 +15,8 @@ ZeitEngine::ZeitEngine(GLVideoWidget* video_widget, QObject *parent) :
     QScreen* screen = QApplication::primaryScreen();
 
     display_refresh_rate = screen->refreshRate();
-    display_safe_max_width = screen->availableSize().width() - 200;
-    display_safe_max_height = screen->availableSize().height() - 200;
+    display_safe_max_width = std::min((int)(screen->availableSize().width() * 0.66), screen->availableSize().width() - 200);
+    display_safe_max_height = std::min((int)(screen->availableSize().height() * 0.66), screen->availableSize().height() - 200);
     display = video_widget;
     display_initialized = false;
     rotation_initialized = false;
@@ -1026,7 +1026,7 @@ bool ZeitEngine::ExportFrame(AVFrame* frame, const QFileInfo output_file)
       output_frame->pts = sequence_iterator - source_sequence.constBegin();
     }
 
-    AVPacket output_packet = {0};
+    AVPacket output_packet;
     av_init_packet(&output_packet);
 
     ret = avcodec_encode_video2(output_codec_context,
