@@ -328,33 +328,46 @@ void ZeitEngine::Play()
 
 void ZeitEngine::Export(const QFileInfo file)
 {
-    for(sequence_iterator = source_sequence.constBegin(); sequence_iterator != source_sequence.constEnd(); ++sequence_iterator)
-    {
-        emit ProgressUpdated("Encoding sequence", sequence_iterator - source_sequence.constBegin(), source_sequence.size());
+    sequence_iterator = source_sequence.constBegin();
+    bool working;
 
-        control_mutex.lock();
-        ZeitFilter filter = filter_flag;
-        control_mutex.unlock();
+    do {
+        if(sequence_iterator != source_sequence.constEnd()) {
+            emit ProgressUpdated("Encoding frames", sequence_iterator - source_sequence.constBegin(), source_sequence.size());
 
-        DecodeFrame();
+            control_mutex.lock();
+            ZeitFilter filter = filter_flag;
+            control_mutex.unlock();
 
-        ScaleFrame(decoder_frame,
-                   decoder_frame->width,
-                   decoder_frame->height,
-                   EXPORT_PIXELFORMAT);
+            DecodeFrame();
 
-        if(filter != ZEIT_FILTER_NONE) {
-            FilterFrame(scaler_frame, filter);
-            RescaleFrame(filter_frame,
-                         filter_frame->width,
-                         filter_frame->height,
-                         EXPORT_PIXELFORMAT);
-            ExportFrame(rescaler_frame, file);
-            FreeFilterData();
+            ScaleFrame(decoder_frame,
+                       decoder_frame->width,
+                       decoder_frame->height,
+                       EXPORT_PIXELFORMAT);
+
+            if(filter != ZEIT_FILTER_NONE) {
+                FilterFrame(scaler_frame, filter);
+                RescaleFrame(filter_frame,
+                             filter_frame->width,
+                             filter_frame->height,
+                             EXPORT_PIXELFORMAT);
+
+                working = ExportFrame(rescaler_frame, file);
+
+                FreeFilterData();
+            } else {
+                working = ExportFrame(scaler_frame, file);
+            }
+
+            sequence_iterator++;
         } else {
-            ExportFrame(scaler_frame, file);
+            emit ProgressUpdated("Writing buffered frames", 0, 0);
+
+            working = ExportFrame(NULL, file);
         }
-    }
+
+    } while(working);
 
     emit ProgressUpdated("Encoding complete", source_sequence.size(), source_sequence.size());
     emit MessageUpdated("Encoding complete, finishing up export ...");
@@ -630,8 +643,6 @@ void ZeitEngine::InitScaler(AVFrame *frame,
         scaler_frame->height = target_height;
         scaler_frame->format = target_pixel_format;
 
-//        qDebug() << "Init scaler with target:" << scaler_frame->width << "x" << scaler_frame->height << " format: " << scaler_frame->format << "linesize: " << scaler_frame->linesize[0];
-
         // Alignment has to be 32 because QImage needs it that way - But we don't always write to QImage - Keep an eye on this
         if( av_image_alloc(scaler_frame->data,
                            scaler_frame->linesize,
@@ -642,8 +653,6 @@ void ZeitEngine::InitScaler(AVFrame *frame,
             fprintf(stderr, "Could not allocate scaler picture\n");
             exit(1);
         }
-
-//        qDebug() << "Inited scaler with target:" << scaler_frame->width << "x" << scaler_frame->height << " format: " << scaler_frame->format << "linesize: " << scaler_frame->linesize[0];
 
         // Buffer is going to be written to rawvideo file, no alignment <-- hm!
         //        if ((ret = av_image_alloc(scaler_data,
@@ -756,7 +765,7 @@ void ZeitEngine::InitRescaler(AVFrame *frame,
         //                                  target_width,
         //                                  target_height,
         //                                  target_pixel_format,
-        //                                  1)) < 0)
+        //                              `    1)) < 0)
         //        {
         //            fprintf(stderr, "Could not allocate destination image\n");
         //            throw(ret);
@@ -845,8 +854,6 @@ void ZeitEngine::InitExporter(AVFrame* frame, const QFileInfo output_file)
 //            throw("Could not allocate video codec context");
 //        }
 
-        output_codec_context->bit_rate = 25000000;
-
         control_mutex.lock();
         if(rotate_90d_cw_flag) {
             output_codec_context->width = frame->height;
@@ -876,20 +883,8 @@ void ZeitEngine::InitExporter(AVFrame* frame, const QFileInfo output_file)
         }
 
         output_codec_context->time_base = output_stream->time_base;
-        output_codec_context->gop_size = 10;
-//        output_codec_context->max_b_frames = 1; Not from muxing.c reference
+        output_codec_context->gop_size = configured_framerate;
         output_codec_context->pix_fmt = EXPORT_PIXELFORMAT;
-
-        if (output_codec_context->codec_id == AV_CODEC_ID_MPEG2VIDEO) {
-            /* just for testing, we also add B frames */
-            output_codec_context->max_b_frames = 2;
-        }
-        if (output_codec_context->codec_id == AV_CODEC_ID_MPEG1VIDEO) {
-            /* Needed to avoid using macroblocks in which some coeffs overflow.
-             * This does not happen with normal video, it just happens here as
-             * the motion of the chroma plane does not match the luma plane. */
-            output_codec_context->mb_decision = 2;
-        }
 
 //        if(EXPORT_CODEC_ID == AV_CODEC_ID_H264) {
 //            /* ??? Not from muxing.c reference, maybe outdated or wrong */
@@ -964,10 +959,8 @@ void ZeitEngine::InitExporter(AVFrame* frame, const QFileInfo output_file)
     }
 }
 
-void ZeitEngine::ExportFrame(AVFrame* frame, const QFileInfo output_file)
+bool ZeitEngine::ExportFrame(AVFrame* frame, const QFileInfo output_file)
 {
-    // BOILERPLATE
-
     int got_output_packet = 0;
     int ret;
 
@@ -976,104 +969,86 @@ void ZeitEngine::ExportFrame(AVFrame* frame, const QFileInfo output_file)
         exporter_initialized = true;
     }
 
-    // COPY IMAGE TO OUTPUT FRAME
+    // Copy to output frame only until we're writing the delayed frames
+    if(frame != NULL) {
 
-    control_mutex.lock();
-    bool flip_x = flip_x_flag;
-    bool flip_y = flip_y_flag;
-    bool rotate_90d_cw = rotate_90d_cw_flag;
-    control_mutex.unlock();
+      control_mutex.lock();
+      bool flip_x = flip_x_flag;
+      bool flip_y = flip_y_flag;
+      bool rotate_90d_cw = rotate_90d_cw_flag;
+      control_mutex.unlock();
 
-    // Y
-    for(int y = 0; y < frame->height; y++) {
-        for(int x = 0; x < frame->width; x++) {
-            int target_x = x;
-            int target_y = y;
+      // Y
+      for(int y = 0; y < frame->height; y++) {
+          for(int x = 0; x < frame->width; x++) {
+              int target_x = x;
+              int target_y = y;
 
-            if(flip_x) { target_x = frame->width - 1 - x; }
-            if(flip_y != rotate_90d_cw) { target_y = frame->height - 1 - y; }
+              if(flip_x) { target_x = frame->width - 1 - x; }
+              if(flip_y != rotate_90d_cw) { target_y = frame->height - 1 - y; }
 
-            if(rotate_90d_cw) {
-                memcpy(output_frame->data[0] + target_x * output_frame->linesize[0] + target_y,
-                       frame->data[0] + y * frame->linesize[0] + x,
-                       sizeof(uint8_t));
-            } else {
-                memcpy(output_frame->data[0] + target_y * output_frame->linesize[0] + target_x,
-                       frame->data[0] + y * frame->linesize[0] + x,
-                       sizeof(uint8_t));
-            }
-        }
+              if(rotate_90d_cw) {
+                  memcpy(output_frame->data[0] + target_x * output_frame->linesize[0] + target_y,
+                         frame->data[0] + y * frame->linesize[0] + x,
+                         sizeof(uint8_t));
+              } else {
+                  memcpy(output_frame->data[0] + target_y * output_frame->linesize[0] + target_x,
+                         frame->data[0] + y * frame->linesize[0] + x,
+                         sizeof(uint8_t));
+              }
+          }
+      }
+
+      // Cb and Cr
+      for(int y = 0; y < frame->height / 2; y++) {
+          for(int x = 0; x < frame->width / 2; x++) {
+              int target_x = x;
+              int target_y = y;
+
+              if(flip_x) { target_x =  frame->width / 2 - 1 - x; }
+              if(flip_y != rotate_90d_cw) { target_y = frame->height / 2 - 1 - y; }
+
+              // (Iterate over Cb and Cr Plane)
+              for(int p = 1; p < 3; p++) {
+                  if(rotate_90d_cw) {
+                      memcpy(output_frame->data[p] + target_x * output_frame->linesize[p] + target_y,
+                             frame->data[p] + y * frame->linesize[p] + x,
+                             sizeof(uint8_t));
+                  } else {
+                      memcpy(output_frame->data[p] + target_y * output_frame->linesize[p] + target_x,
+                             frame->data[p] + y * frame->linesize[p] + x,
+                             sizeof(uint8_t));
+                  }
+              }
+          }
+      }
+
+      output_frame->pts = sequence_iterator - source_sequence.constBegin();
     }
 
-    // Cb and Cr
-    for(int y = 0; y < frame->height / 2; y++) {
-        for(int x = 0; x < frame->width / 2; x++) {
-            int target_x = x;
-            int target_y = y;
+    AVPacket output_packet = {0};
+    av_init_packet(&output_packet);
 
-            if(flip_x) { target_x =  frame->width / 2 - 1 - x; }
-            if(flip_y != rotate_90d_cw) { target_y = frame->height / 2 - 1 - y; }
+    ret = avcodec_encode_video2(output_codec_context,
+                                &output_packet,
+                                frame ? output_frame : NULL,
+                                &got_output_packet);
 
-            // (Iterate over Cb and Cr Plane)
-            for(int p = 1; p < 3; p++) {
-                if(rotate_90d_cw) {
-                    memcpy(output_frame->data[p] + target_x * output_frame->linesize[p] + target_y,
-                           frame->data[p] + y * frame->linesize[p] + x,
-                           sizeof(uint8_t));
-                } else {
-                    memcpy(output_frame->data[p] + target_y * output_frame->linesize[p] + target_x,
-                           frame->data[p] + y * frame->linesize[p] + x,
-                           sizeof(uint8_t));
-                }
-            }
-        }
+    if(ret < 0) {
+        throw("Error encoding output video frame");
     }
 
-    // SE BOILERPLATE AGAIN
-
-    output_frame->pts = sequence_iterator - source_sequence.constBegin();
-
-    if(output_format_context->oformat->flags & AVFMT_RAWPICTURE) {
-        AVPacket output_packet;
-        av_init_packet(&output_packet);
-
-        output_packet.flags |= AV_PKT_FLAG_KEY;
-        output_packet.stream_index = output_stream->index;
-        output_packet.data = (uint8_t *)output_frame;
-        output_packet.size = sizeof(AVPicture); // Does this conflict with my AVFrame solution (remember: muxing.c uses an AVPicture)
-
-        output_packet.pts = output_packet.dts = output_frame->pts;
-
+    if(got_output_packet) {
         av_packet_rescale_ts(&output_packet,
                              output_codec_context->time_base,
                              output_stream->time_base);
 
-        ret = av_interleaved_write_frame(output_format_context, &output_packet);
+        output_packet.stream_index = output_stream->index;
+
+        ret = av_interleaved_write_frame(output_format_context,
+                                         &output_packet);
     } else {
-        AVPacket output_packet; // = { 0 }; probably unnecessary and incomplete allocation (buf is written by av_init_packet anyway
-        av_init_packet(&output_packet);
-
-        ret = avcodec_encode_video2(output_codec_context,
-                                    &output_packet,
-                                    output_frame,
-                                    &got_output_packet);
-
-        if(ret < 0) {
-            throw("Error encoding output video frame");
-        }
-
-        if(got_output_packet) {
-            av_packet_rescale_ts(&output_packet,
-                                 output_codec_context->time_base,
-                                 output_stream->time_base);
-
-            output_packet.stream_index = output_stream->index;
-
-            ret = av_interleaved_write_frame(output_format_context,
-                                             &output_packet);
-        } else {
-            ret = 0;
-        }
+        ret = 0;
     }
 
     if(ret < 0) {
@@ -1083,7 +1058,7 @@ void ZeitEngine::ExportFrame(AVFrame* frame, const QFileInfo output_file)
         throw("Error while writing output video frame");
     }
 
-//    return (frame || got_packet) ? 0 : 1; In muxing.c this is what is returned
+    return frame || got_output_packet;
 
 }
 
@@ -1098,32 +1073,6 @@ void ZeitEngine::CloseExport()
     }
 
     avformat_free_context(output_format_context);
-
-//    SUCH LEGACY
-//    uint8_t endcode[] = { 0, 0, 1, 0xb7 };
-//    int got_output = 1;
-
-//    // Get the delayed frames
-//    while(got_output) {
-//        if( avcodec_encode_video2(output_codec_context, encoder_packet, NULL, &got_output) < 0 ) {
-//            fprintf(stderr, "Error encoding frame\n");
-//            exit(1);
-//        }
-
-//        if (got_output) {
-//            printf("Write delayed frame (size=%5d)\n", encoder_packet->size);
-//            encoder_output_file->write(reinterpret_cast<char *>(encoder_packet->data), encoder_packet->size);
-//            av_packet_unref(encoder_packet);
-//        }
-//    }
-
-//    // add sequence end code to have a real mpeg file
-//    //av_image_alloc(outputFrame->data, outputFrame->linesize, outputCodecContext->width, outputCodecContext->height, outputCodecContext->pix_fmt, 32)
-//    encoder_output_file->write(reinterpret_cast<char *>(endcode), sizeof(endcode));
-//    encoder_output_file->close();
-
-//    avcodec_close(output_codec_context);
-//    av_free(output_codec_context);
 
     av_freep(&output_frame->data[0]);
     av_frame_free(&output_frame);

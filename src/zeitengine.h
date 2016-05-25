@@ -301,8 +301,8 @@ class ZeitEngine : public QObject
     /*!
      * \brief Initalize the encoder
      * \param frame Pointer to the frame that shall be encoded
-     * \param output_file The path of the movie file to be created
-     * \sa EncodeFrame
+     * \param output_file The path of the output file to be created
+     * \sa ExportFrame
      *
      * Initializes all members of the encoder to a configuration that fits the
      * passed frame for encoding; Opens the file for output to disk.
@@ -311,9 +311,12 @@ class ZeitEngine : public QObject
 
     /*!
      * \brief Encode current frame to video file on disk
-     * \return Some return code
+     * \param frame Pointer to the frame that shall be encoded or NULL to write delayed frames
+     * \param output_file The path of the output file to be created
+     *
+     * \return true if an actual frame was sent to the encoder or a delayed frame was written
      */
-    void ExportFrame(AVFrame *frame, const QFileInfo output_file);
+    bool ExportFrame(AVFrame *frame, const QFileInfo output_file);
 
     /*!
      * \brief Free all encoder members

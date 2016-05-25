@@ -56,6 +56,16 @@ signals:
 public slots:
     void EnableControls(const bool lock);
     void UpdateMessage(const QString text);
+
+    /*!
+     * \brief Update the progress bar
+     * \param text Text that should be displayed
+     * \param current Current step
+     * \param total Total steps
+     *
+     * If current == total == 0, shows a busy indication (unknown progress)
+     * If current and total are equal but > 0, hides the progress bar
+     */
     void UpdateProgress(const QString text, const int current, const int total);
 private slots:
     void on_actionAbout_triggered();
