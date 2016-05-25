@@ -860,15 +860,18 @@ void ZeitEngine::InitExporter(AVFrame* frame, const QFileInfo output_file)
         switch(configured_framerate) {
 
             case ZEIT_RATE_23_976:
-                output_stream->time_base = (AVRational){1001, 30000};
+                output_stream->time_base.num = 1001;
+                output_stream->time_base.den = 30000;
                 break;
 
             case ZEIT_RATE_29_97:
-                output_stream->time_base = (AVRational){125, 2997};
+                output_stream->time_base.num = 125;
+                output_stream->time_base.den = 2997;
                 break;
 
             default:
-                output_stream->time_base = (AVRational){1, configured_framerate};
+                output_stream->time_base.num = 1;
+                output_stream->time_base.den = configured_framerate;
                 break;
         }
 
