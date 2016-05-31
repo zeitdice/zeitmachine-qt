@@ -358,7 +358,7 @@ void MainWindow::on_actionOpen_triggered()
 
         dir.setFilter(QDir::Files);
 
-        QStringList image_extension_filters{"*.jpg","*.jpeg","*.png"};
+        QStringList image_extension_filters{"*.jpg","*.jpeg","*.png", "*.zd"};
         dir.setNameFilters(image_extension_filters);
 
         QFileInfoList files = dir.entryInfoList();
@@ -374,7 +374,7 @@ void MainWindow::on_actionOpen_triggered()
         if(files.length() < 1) {
             QMessageBox::information(this,
                                      "No supported footage found",
-                                     "Your chosen folder does not contain images, or does not contain any of a format that is supported (.jpg/.jpeg/.png).");
+                                     "Your chosen folder does not contain images, or does not contain any of a format that is supported (.jpg/.jpeg/.png/.zd).");
             return;
         }
 

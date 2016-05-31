@@ -62,6 +62,14 @@ enum ZeitRate {
 };
 
 /*!
+ * \brief Discerns between the proprietary ZD mode and a general mode for jpg, png
+ */
+enum ZeitMode {
+    ZEIT_MODE_ZD,
+    ZEIT_MODE_GENERAL
+};
+
+/*!
  * \brief The `ZeitEngine`: Central threadable encoding facility class
  *
  * This class is meant to run in a separate thread; It offers a high level
@@ -73,6 +81,11 @@ enum ZeitRate {
 class ZeitEngine : public QObject
 {
     Q_OBJECT
+
+    /*!
+     * \brief Sets the mode
+     */
+    ZeitMode operation_mode;
 
     QElapsedTimer timer;
 
@@ -114,6 +127,10 @@ class ZeitEngine : public QObject
 
     // uint8_t *decoder_data[4];
     // int decoder_data_linesize[8];
+
+    // Debayer members
+
+    AVFrame *debayered_frame;
 
     // Filter members
 
@@ -190,6 +207,16 @@ class ZeitEngine : public QObject
      * function which image to decode from the whole sequence.
      */
     void DecodeFrame();
+
+
+    /*!
+     * \brief Debayer a frame
+     * \param frame The source frame to debayer
+     * \param fast_debayering true for fast nearest neighbour method, false for slow but higher quality linear filtering
+     *
+     * Debayers a frame into debayered_frame
+     */
+    void DebayerFrame(AVFrame *frame, bool fast_debayering);
 
     /*!
      * \brief Initialise all filter members

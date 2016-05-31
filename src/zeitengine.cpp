@@ -5,6 +5,8 @@ ZeitEngine::ZeitEngine(GLVideoWidget* video_widget, QObject *parent) :
 {
     static bool avglobals_initialized = false;
 
+    operation_mode = ZEIT_MODE_ZD;
+
     if(!avglobals_initialized) {
         av_register_all();
         avcodec_register_all();
@@ -72,10 +74,24 @@ void ZeitEngine::InitDecoder()
     {
         QString first_image = (*source_sequence.constBegin()).absoluteFilePath();
 
+        AVDictionary *options = NULL;
+
+        if(operation_mode == ZEIT_MODE_ZD) {
+            av_dict_set(&options, "video_size", "1944x1944", 0);
+            av_dict_set(&options, "pixel_format", "bayer_grbg16le", 0);
+        }
+
         // Open input file
-        if ((ret = avformat_open_input(&decoder_format_context, first_image.toUtf8().data(), decoder_format, NULL)) < 0) {
+        if ((ret = avformat_open_input(&decoder_format_context, first_image.toUtf8().data(), decoder_format, &options)) < 0) {
             av_log(NULL, AV_LOG_ERROR, "Failed to open input file '%s'\n", first_image.toUtf8().data());
             throw(ret);
+        }
+
+        // TODO: Check if freeing is a problem if not setting (probably not, quick evaluation)
+        av_dict_free(&options);
+
+        if(operation_mode == ZEIT_MODE_ZD) {
+            decoder_format_context->streams[0]->codec->codec_id = AV_CODEC_ID_RAWVIDEO;
         }
 
         // Find decoder codec
@@ -113,7 +129,8 @@ void ZeitEngine::FreeDecoder()
 
 void ZeitEngine::Load(const QFileInfoList& sequence)
 {
-    display_initialized = false; // ATTENTION - might make sense to abstract this whole display init with InitDisplay() FreeDisplay() and such too
+    // ATTENTION - might make sense to abstract this whole display init with InitDisplay() FreeDisplay() and such too
+    display_initialized = false;
 
     FreeDecoder();
     FreeScaler();
@@ -122,6 +139,12 @@ void ZeitEngine::Load(const QFileInfoList& sequence)
     FreeRescaler();
 
     source_sequence = sequence;
+
+    if((*sequence.constBegin()).suffix() == "zd") {
+        operation_mode = ZEIT_MODE_ZD;
+    } else {
+        operation_mode = ZEIT_MODE_GENERAL;
+    }
 
     InitDecoder();
 
@@ -270,10 +293,20 @@ void ZeitEngine::Play()
 
         // extract size
 
-        ScaleFrame(decoder_frame,
-                   display_width,
-                   display_height,
-                   DISPLAY_AV_PIXEL_FORMAT);
+        if(operation_mode == ZEIT_MODE_ZD) {
+            DebayerFrame(decoder_frame, true);
+            ScaleFrame(debayered_frame,
+                       display_width,
+                       display_height,
+                       DISPLAY_AV_PIXEL_FORMAT);
+        } else {
+            ScaleFrame(decoder_frame,
+                       display_width,
+                       display_height,
+                       DISPLAY_AV_PIXEL_FORMAT);
+        }
+
+
 
         if(filter != ZEIT_FILTER_NONE) {
             FilterFrame(scaler_frame, filter);
@@ -341,10 +374,18 @@ void ZeitEngine::Export(const QFileInfo file)
 
             DecodeFrame();
 
-            ScaleFrame(decoder_frame,
-                       decoder_frame->width,
-                       decoder_frame->height,
-                       EXPORT_PIXELFORMAT);
+            if(operation_mode == ZEIT_MODE_ZD) {
+                DebayerFrame(decoder_frame, false);
+                ScaleFrame(debayered_frame,
+                           debayered_frame->width,
+                           debayered_frame->height,
+                           EXPORT_PIXELFORMAT);
+            } else {
+                ScaleFrame(decoder_frame,
+                           decoder_frame->width,
+                           decoder_frame->height,
+                           EXPORT_PIXELFORMAT);
+            }
 
             if(filter != ZEIT_FILTER_NONE) {
                 FilterFrame(scaler_frame, filter);
@@ -436,6 +477,224 @@ void ZeitEngine::DecodeFrame()
     }
     catch(int code) {
         av_log(NULL, AV_LOG_ERROR, "Return code was %d", code);
+    }
+}
+
+void ZeitEngine::DebayerFrame(AVFrame *frame, bool fast_debayering)
+{
+    int ret;
+
+    // Allocate debayer frame
+    if( !(debayered_frame = av_frame_alloc()) ) {
+        av_log(NULL, AV_LOG_ERROR, "Failed to allocate debayer frame\n");
+        ret = AVERROR(ENOMEM);
+        throw(ret);
+    }
+
+    av_frame_copy_props(debayered_frame, frame);
+    debayered_frame->width = frame->width;
+    debayered_frame->height = frame->height;
+    debayered_frame->format = AV_PIX_FMT_RGB24;
+
+    if( av_image_alloc(debayered_frame->data,
+                       debayered_frame->linesize,
+                       debayered_frame->width,
+                       debayered_frame->height,
+                       (AVPixelFormat)debayered_frame->format,
+                       32) < 0 ) {
+        fprintf(stderr, "Could not allocate debayer picture\n");
+        exit(1);
+    }
+
+    for(int y = 0; y < frame->height; y++) {
+        for(int x = 0; x < frame->width; x++) {
+
+            int factor = 16; // 12bit (0-4096) to 8bit (0-256) range normalization factor
+
+            uint8_t *source_pixel_ptr = frame->data[0] + (y * frame->linesize[0]) + (x * sizeof(uint16_t));
+            uint8_t *target_pixel_ptr = debayered_frame->data[0] + (y * debayered_frame->linesize[0]) + (x * 3);
+
+            uint8_t *target_pixel_red_ptr = target_pixel_ptr;
+            uint8_t *target_pixel_green_ptr = target_pixel_ptr + sizeof(uint8_t);
+            uint8_t *target_pixel_blue_ptr = target_pixel_ptr + 2 * sizeof(uint8_t);
+
+            if(fast_debayering) {
+                // Fast debayering using nearest neighbour estimation
+
+                if(x % 2 == 0 && y % 2 == 0) {
+
+                    // *  *  *
+                    // * <G>[R]
+                    // * [B] G
+
+                    *target_pixel_red_ptr = *(uint16_t*)(source_pixel_ptr + sizeof(uint16_t)) / factor;
+                    *target_pixel_green_ptr = *(uint16_t*)source_pixel_ptr / factor;
+                    *target_pixel_blue_ptr = *(uint16_t*)(source_pixel_ptr + frame->linesize[0]) / factor;
+
+                } else if(x % 2 == 1 && y % 2 == 1) {
+
+                    //  G [R] *
+                    // [B]<G> *
+                    //  *  *  *
+
+                    *target_pixel_red_ptr = *(uint16_t*)(source_pixel_ptr - frame->linesize[0]) / factor;
+                    *target_pixel_green_ptr = *(uint16_t*)source_pixel_ptr / factor;
+                    *target_pixel_blue_ptr = *(uint16_t*)(source_pixel_ptr - sizeof(uint16_t)) / factor;
+
+
+                } else if(x % 2 == 1 && y % 2 == 0) {
+
+                    //  *  *  *
+                    //  * [G]<R>
+                    //  * [B] G
+
+                    *target_pixel_red_ptr = *(uint16_t*)source_pixel_ptr / factor;
+                    *target_pixel_green_ptr = *(uint16_t*)(source_pixel_ptr - sizeof(uint16_t)) / factor;
+                    *target_pixel_blue_ptr = *(uint16_t*)(source_pixel_ptr + frame->linesize[0] - sizeof(uint16_t)) / factor;
+
+                } else if(x % 2 == 0 && y % 2 == 1) {
+
+                    //  *  *  *
+                    //  *  G [R]
+                    //  * <B>[G]
+
+                    *target_pixel_red_ptr = *(uint16_t*)(source_pixel_ptr - frame->linesize[0] + sizeof(uint16_t)) / factor;
+                    *target_pixel_green_ptr = *(uint16_t*)(source_pixel_ptr + sizeof(uint16_t)) / factor;
+                    *target_pixel_blue_ptr = *(uint16_t*)source_pixel_ptr / factor;
+
+                }
+            } else {
+                // Slow but better debayering using bilinear filtering
+
+                if(x % 2 == 0 && y % 2 == 0) {
+
+                    if(x > 0) {
+                        *target_pixel_red_ptr = ((*(uint16_t*)(source_pixel_ptr - sizeof(uint16_t)) +
+                                                  *(uint16_t*)(source_pixel_ptr + sizeof(uint16_t))) / 2) / factor;
+                    } else {
+                        *target_pixel_red_ptr = *(uint16_t*)(source_pixel_ptr + sizeof(uint16_t)) / factor;
+                    }
+
+                    *target_pixel_green_ptr = *(uint16_t*)source_pixel_ptr / factor;
+
+                    if(y > 0) {
+                        *target_pixel_blue_ptr = ((*(uint16_t*)(source_pixel_ptr - frame->linesize[0]) +
+                                                   *(uint16_t*)(source_pixel_ptr + frame->linesize[0])) / 2) / factor;
+                    } else {
+                        *target_pixel_blue_ptr = *(uint16_t*)(source_pixel_ptr + frame->linesize[0]) / factor;
+                    }
+
+                } else if(x % 2 == 1 && y % 2 == 1) {
+
+                    if(y < frame->height - 1) {
+                        *target_pixel_red_ptr = ((*(uint16_t*)(source_pixel_ptr - frame->linesize[0]) +
+                                                  *(uint16_t*)(source_pixel_ptr + frame->linesize[0])) / 2) / factor;
+                    } else {
+                        *target_pixel_red_ptr = *(uint16_t*)(source_pixel_ptr - frame->linesize[0]) / factor;
+                    }
+
+                    *target_pixel_green_ptr = *(uint16_t*)source_pixel_ptr / factor;
+
+                    if(x < frame->width - 1) {
+                        *target_pixel_blue_ptr = ((*(uint16_t*)(source_pixel_ptr - sizeof(uint16_t)) +
+                                                   *(uint16_t*)(source_pixel_ptr + sizeof(uint16_t))) / 2) / factor;
+                    } else {
+                        *target_pixel_blue_ptr = *(uint16_t*)(source_pixel_ptr - sizeof(uint16_t)) / factor;
+                    }
+
+                } else if(x % 2 == 1 && y % 2 == 0) {
+
+                    *target_pixel_red_ptr = *(uint16_t*)source_pixel_ptr / factor;
+
+                    if(y > 0) {
+                        if(x < frame->width - 1) {
+                            *target_pixel_green_ptr = ((*(uint16_t*)(source_pixel_ptr - sizeof(uint16_t)) +
+                                                        *(uint16_t*)(source_pixel_ptr + sizeof(uint16_t)) +
+                                                        *(uint16_t*)(source_pixel_ptr - frame->linesize[0]) +
+                                                        *(uint16_t*)(source_pixel_ptr + frame->linesize[0])) / 4) / factor;
+                        } else {
+                            *target_pixel_green_ptr = ((*(uint16_t*)(source_pixel_ptr - sizeof(uint16_t)) +
+                                                        *(uint16_t*)(source_pixel_ptr - frame->linesize[0]) +
+                                                        *(uint16_t*)(source_pixel_ptr + frame->linesize[0])) / 3) / factor;
+                        }
+                    } else {
+                        if(x < frame->width - 1) {
+                            *target_pixel_green_ptr = ((*(uint16_t*)(source_pixel_ptr - sizeof(uint16_t)) +
+                                                        *(uint16_t*)(source_pixel_ptr + sizeof(uint16_t)) +
+                                                        *(uint16_t*)(source_pixel_ptr + frame->linesize[0])) / 3) / factor;
+                        } else {
+                            *target_pixel_green_ptr = ((*(uint16_t*)(source_pixel_ptr - sizeof(uint16_t)) +
+                                                        *(uint16_t*)(source_pixel_ptr + frame->linesize[0])) / 2) / factor;
+                        }
+                    }
+
+                    if(y > 0) {
+                        if(x < frame->width - 1) {
+                            *target_pixel_blue_ptr = ((*(uint16_t*)(source_pixel_ptr - frame->linesize[0] - sizeof(uint16_t)) +
+                                                       *(uint16_t*)(source_pixel_ptr - frame->linesize[0] + sizeof(uint16_t)) +
+                                                       *(uint16_t*)(source_pixel_ptr + frame->linesize[0] - sizeof(uint16_t)) +
+                                                       *(uint16_t*)(source_pixel_ptr + frame->linesize[0] + sizeof(uint16_t))) / 4) / factor;
+                        } else {
+                            *target_pixel_blue_ptr = ((*(uint16_t*)(source_pixel_ptr - frame->linesize[0] - sizeof(uint16_t)) +
+                                                       *(uint16_t*)(source_pixel_ptr + frame->linesize[0] - sizeof(uint16_t))) / 2) / factor;
+                        }
+                    } else {
+                        if(x < frame->width - 1) {
+                            *target_pixel_blue_ptr = ((*(uint16_t*)(source_pixel_ptr + frame->linesize[0] - sizeof(uint16_t)) +
+                                                       *(uint16_t*)(source_pixel_ptr + frame->linesize[0] + sizeof(uint16_t))) / 2) / factor;
+                        } else {
+                            *target_pixel_blue_ptr = *(uint16_t*)(source_pixel_ptr + frame->linesize[0] - sizeof(uint16_t)) / factor;
+                        }
+                    }
+
+                } else if(x % 2 == 0 && y % 2 == 1) {
+
+                    if(x > 0) {
+                        if(y < frame->height - 1) {
+                            *target_pixel_red_ptr = ((*(uint16_t*)(source_pixel_ptr - frame->linesize[0] - sizeof(uint16_t)) +
+                                                      *(uint16_t*)(source_pixel_ptr - frame->linesize[0] + sizeof(uint16_t)) +
+                                                      *(uint16_t*)(source_pixel_ptr + frame->linesize[0] - sizeof(uint16_t)) +
+                                                      *(uint16_t*)(source_pixel_ptr + frame->linesize[0] + sizeof(uint16_t))) / 4) / factor;
+                        } else {
+                            *target_pixel_red_ptr = ((*(uint16_t*)(source_pixel_ptr - frame->linesize[0] - sizeof(uint16_t)) +
+                                                      *(uint16_t*)(source_pixel_ptr - frame->linesize[0] + sizeof(uint16_t))) / 2) / factor;
+                        }
+                    } else {
+                        if(y < frame->height - 1) {
+                            *target_pixel_red_ptr = ((*(uint16_t*)(source_pixel_ptr - frame->linesize[0] + sizeof(uint16_t)) +
+                                                      *(uint16_t*)(source_pixel_ptr + frame->linesize[0] + sizeof(uint16_t))) / 2) / factor;
+                        } else {
+                            *target_pixel_red_ptr = *(uint16_t*)(source_pixel_ptr - frame->linesize[0] + sizeof(uint16_t)) / factor;
+                        }
+                    }
+
+                    if(x > 0) {
+                        if(y < frame->height - 1) {
+                            *target_pixel_green_ptr = ((*(uint16_t*)(source_pixel_ptr - sizeof(uint16_t)) +
+                                                        *(uint16_t*)(source_pixel_ptr + sizeof(uint16_t)) +
+                                                        *(uint16_t*)(source_pixel_ptr - frame->linesize[0]) +
+                                                        *(uint16_t*)(source_pixel_ptr + frame->linesize[0])) / 4) / factor;
+                        } else {
+                            *target_pixel_green_ptr = ((*(uint16_t*)(source_pixel_ptr - sizeof(uint16_t)) +
+                                                        *(uint16_t*)(source_pixel_ptr + sizeof(uint16_t)) +
+                                                        *(uint16_t*)(source_pixel_ptr - frame->linesize[0])) / 3) / factor;
+                        }
+                    } else {
+                        if(y < frame->height - 1) {
+                            *target_pixel_green_ptr = ((*(uint16_t*)(source_pixel_ptr + sizeof(uint16_t)) +
+                                                        *(uint16_t*)(source_pixel_ptr - frame->linesize[0]) +
+                                                        *(uint16_t*)(source_pixel_ptr + frame->linesize[0])) / 3) / factor;
+                        } else {
+                            *target_pixel_green_ptr = ((*(uint16_t*)(source_pixel_ptr + sizeof(uint16_t)) +
+                                                        *(uint16_t*)(source_pixel_ptr - frame->linesize[0])) / 2) / factor;
+                        }
+                    }
+
+                    *target_pixel_blue_ptr = *(uint16_t*)source_pixel_ptr / factor;
+
+                }
+            }
+        }
     }
 }
 
