@@ -120,6 +120,7 @@ class ZeitEngine : public QObject
 
     AVInputFormat *decoder_format;
     AVCodec *decoder_codec;
+    AVCodecParameters *decoder_codec_parameters;
     AVCodecContext *decoder_codec_context;
     AVFormatContext *decoder_format_context;
     AVFrame *decoder_frame;
@@ -146,15 +147,12 @@ class ZeitEngine : public QObject
 
     // Exporter members
 
-    AVCodec *output_codec;
-    AVCodecContext *output_codec_context;
-    AVFrame *output_frame;
+    AVCodecContext *encoder_context;
+    AVFrame *encoder_frame;
     AVPacket *encoder_packet;
     std::ofstream* encoder_output_file;
 
-    AVDictionary* output_options;
     AVFormatContext* output_format_context;
-    AVOutputFormat* output_format;
     AVStream* output_stream;
 
     bool exporter_initialized;

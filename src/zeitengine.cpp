@@ -29,6 +29,7 @@ ZeitEngine::ZeitEngine(GLVideoWidget* video_widget, QObject *parent) :
     decoder_format_context = NULL;
     decoder_codec = NULL;
     decoder_codec_context = NULL;
+    decoder_codec_parameters = NULL;
     decoder_frame = NULL;
     decoder_packet = NULL;
 
@@ -91,16 +92,19 @@ void ZeitEngine::InitDecoder()
         av_dict_free(&options);
 
         if(operation_mode == ZEIT_MODE_ZD) {
-            decoder_format_context->streams[0]->codec->codec_id = AV_CODEC_ID_RAWVIDEO;
+            decoder_format_context->streams[0]->codecpar->codec_id = AV_CODEC_ID_RAWVIDEO;
         }
 
         // Find decoder codec
-        decoder_codec_context = decoder_format_context->streams[0]->codec;
-        if( !(decoder_codec = avcodec_find_decoder(decoder_codec_context->codec_id)) ) {
+        decoder_codec_parameters = decoder_format_context->streams[0]->codecpar;
+        if( !(decoder_codec = avcodec_find_decoder(decoder_codec_parameters->codec_id)) ) {
             av_log(NULL, AV_LOG_ERROR, "Failed to find input codec\n");
             ret = AVERROR(EINVAL);
             throw(ret);
         }
+
+        // Allocate decoder codec context
+        decoder_codec_context =  avcodec_alloc_context3(decoder_codec);
 
         // Open decoder codec
         if( (ret = avcodec_open2(decoder_codec_context, decoder_codec, NULL)) < 0) {
@@ -116,13 +120,17 @@ void ZeitEngine::InitDecoder()
         }
     }
     catch(int code) {
-        av_log(NULL, AV_LOG_ERROR, "Return code was %d", code);
+        char message[255];
+        av_make_error_string(message, 255, code);
+        av_log(NULL, AV_LOG_ERROR, "%d - %s\n", code, message);
+        throw(message);
     }
 }
 
 void ZeitEngine::FreeDecoder()
 {
     avcodec_close(decoder_codec_context);
+    avcodec_free_context(&decoder_codec_context);
     avformat_close_input(&decoder_format_context);
     av_frame_free(&decoder_frame);
 }
@@ -423,7 +431,7 @@ void ZeitEngine::Export(const QFileInfo file)
 
 void ZeitEngine::DecodeFrame()
 {
-    int frame_decoded, ret;
+    int ret;
 
     try
     {
@@ -447,9 +455,15 @@ void ZeitEngine::DecodeFrame()
             throw(ret);
         }
 
-        // Decode frame
-        if( (ret = avcodec_decode_video2(decoder_codec_context, decoder_frame, &frame_decoded, decoder_packet)) < 0 || !frame_decoded ) {
-            av_log(NULL, AV_LOG_ERROR, "Failed to decode image from file\n");
+        // Send packet to decoder
+        if( (ret = avcodec_send_packet(decoder_codec_context, decoder_packet)) < 0 ) {
+            av_log(NULL, AV_LOG_ERROR, "Failed to send packet to decoder\n");
+            throw(ret);
+        }
+
+        // Receive frame from decoder
+        if( (ret = avcodec_receive_frame(decoder_codec_context, decoder_frame)) < 0) {
+            av_log(NULL, AV_LOG_ERROR, "Failed to receive frame from decoder\n");
             throw(ret);
         }
 
@@ -476,7 +490,10 @@ void ZeitEngine::DecodeFrame()
         }
     }
     catch(int code) {
-        av_log(NULL, AV_LOG_ERROR, "Return code was %d", code);
+        char message[255];
+        av_make_error_string(message, 255, code);
+        av_log(NULL, AV_LOG_ERROR, "%d - %s\n", code, message);
+        throw(message);
     }
 }
 
@@ -720,9 +737,9 @@ void ZeitEngine::InitFilter(AVFrame* frame, ZeitFilter filter)
                  frame->height,
                  frame->format,
                  1,
-                 1,//source_framerate,//decoder_codec_context->time_base.den,
-                 decoder_codec_context->sample_aspect_ratio.num,
-                 decoder_codec_context->sample_aspect_ratio.den);
+                 1,//source_framerate,//decoder_codec_parameters->time_base.den,
+                 decoder_codec_parameters->sample_aspect_ratio.num,
+                 decoder_codec_parameters->sample_aspect_ratio.den);
 
         if( (ret = avfilter_graph_create_filter(&buffersource_context,
                                                 buffersource,
@@ -808,10 +825,11 @@ void ZeitEngine::InitFilter(AVFrame* frame, ZeitFilter filter)
         }
 
     }
-    catch(int code)
-    {
-        av_log(NULL, AV_LOG_ERROR, "Return code was %d", code);
-        return;
+    catch(int code) {
+        char message[255];
+        av_make_error_string(message, 255, code);
+        av_log(NULL, AV_LOG_ERROR, "%d - %s\n", code, message);
+        throw(message);
     }
 
     configured_filter = filter;
@@ -829,18 +847,27 @@ void ZeitEngine::FilterFrame(AVFrame* frame, ZeitFilter filter)
 
     int ret;
 
-    // Push the decoded frame into the filtergraph
-    if( (ret = av_buffersrc_add_frame_flags(buffersource_context, frame, AV_BUFFERSRC_FLAG_KEEP_REF)) < 0) {
-        av_log(NULL, AV_LOG_ERROR, "Error while feeding the filtergraph\n");
-        throw(ret);
-    }
+    try {
+        // Push the decoded frame into the filtergraph
+        ret = av_buffersrc_add_frame_flags(buffersource_context, frame, AV_BUFFERSRC_FLAG_KEEP_REF);
+        if(ret < 0) {
+            throw(ret);
+        }
 
-    // Pull filtered frames from the filtergraph
-    while(true) {
-        ret = av_buffersink_get_frame(buffersink_context, filter_frame);
-        if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
-            break;
-        if (ret < 0) { throw(ret); }
+        // Pull filtered frames from the filtergraph
+        while(true) {
+            ret = av_buffersink_get_frame(buffersink_context, filter_frame);
+            if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
+                break;
+            if (ret < 0) {
+                throw(ret);
+            }
+        }
+    } catch(int code) {
+        char message[255];
+        av_make_error_string(message, 255, code);
+        av_log(NULL, AV_LOG_ERROR, "%d - %s\n", code, message);
+        throw(message);
     }
 }
 
@@ -927,10 +954,11 @@ void ZeitEngine::InitScaler(AVFrame *frame,
 
         scaler_initialized = true;
     }
-    catch(int code)
-    {
-        av_log(NULL, AV_LOG_ERROR, "Return code was %d", code);
-        return;
+    catch(int code) {
+        char message[255];
+        av_make_error_string(message, 255, code);
+        av_log(NULL, AV_LOG_ERROR, "%d - %s\n", code, message);
+        throw(message);
     }
 }
 
@@ -1032,10 +1060,11 @@ void ZeitEngine::InitRescaler(AVFrame *frame,
 
         rescaler_initialized = true;
     }
-    catch(int code)
-    {
-        av_log(NULL, AV_LOG_ERROR, "Return code was %d", code);
-        return;
+    catch(int code) {
+        char message[255];
+        av_make_error_string(message, 255, code);
+        av_log(NULL, AV_LOG_ERROR, "%d - %s\n", code, message);
+        throw(message);
     }
 }
 
@@ -1073,6 +1102,7 @@ void ZeitEngine::FreeRescaler()
 
 void ZeitEngine::InitExporter(AVFrame* frame, const QFileInfo output_file)
 {
+    AVCodec *encoder;
     int ret;
 
     try {
@@ -1080,147 +1110,123 @@ void ZeitEngine::InitExporter(AVFrame* frame, const QFileInfo output_file)
                                        NULL,
                                        NULL,
                                        output_file.absoluteFilePath().toUtf8().data());
-
         if(!output_format_context) {
             throw("Could not allocate output context");
         }
 
-        output_format = output_format_context->oformat;
-
-//        encoder_output_file = new std::ofstream;
-
-        output_codec = avcodec_find_encoder(EXPORT_CODEC_ID);
-
-        if(!output_codec) {
-            throw("Output codec not found");
-        }
-
-        output_stream = avformat_new_stream(output_format_context, output_codec);
-
+        output_stream = avformat_new_stream(output_format_context, NULL);
         if(!output_stream) {
             throw("Could not allocate output stream");
         }
 
-        output_stream->id = output_format_context->nb_streams - 1;
+        encoder = avcodec_find_encoder(EXPORT_CODEC_ID);
+        if(!encoder) {
+            throw("Could not find encoder codec");
+        }
 
-        output_codec_context = output_stream->codec;
+        encoder_context = avcodec_alloc_context3(encoder);
+        if(!encoder_context) {
+            throw("Could not allocate encoder codec context");
+        }
 
-        output_codec_context->codec_id = output_format->video_codec;
-        output_codec_context->bit_rate = 25000000;
-
-//        output_codec_context = avcodec_alloc_context3(output_encoder)
-//        if(!output_codec_context) {
-//            throw("Could not allocate video codec context");
-//        }
+        encoder_context->bit_rate = 25000000;
 
         control_mutex.lock();
         if(rotate_90d_cw_flag) {
-            output_codec_context->width = frame->height;
-            output_codec_context->height = frame->width;
+            encoder_context->width = frame->height;
+            encoder_context->height = frame->width;
         } else {
-            output_codec_context->width = frame->width;
-            output_codec_context->height = frame->height;
+            encoder_context->width = frame->width;
+            encoder_context->height = frame->height;
         }
         control_mutex.unlock();
 
         switch(configured_framerate) {
-
             case ZEIT_RATE_23_976:
-                output_stream->time_base.num = 1001;
-                output_stream->time_base.den = 30000;
+                encoder_context->time_base.num = 1001;
+                encoder_context->time_base.den = 30000;
                 break;
 
             case ZEIT_RATE_29_97:
-                output_stream->time_base.num = 125;
-                output_stream->time_base.den = 2997;
+                encoder_context->time_base.num = 125;
+                encoder_context->time_base.den = 2997;
                 break;
 
             default:
-                output_stream->time_base.num = 1;
-                output_stream->time_base.den = configured_framerate;
+                encoder_context->time_base.num = 1;
+                encoder_context->time_base.den = configured_framerate;
                 break;
         }
 
-        output_codec_context->time_base = output_stream->time_base;
-        output_codec_context->gop_size = configured_framerate;
-        output_codec_context->pix_fmt = EXPORT_PIXELFORMAT;
+        encoder_context->gop_size = configured_framerate;
+        encoder_context->pix_fmt = EXPORT_PIXELFORMAT;
 
-//        if(EXPORT_CODEC_ID == AV_CODEC_ID_H264) {
-//            /* ??? Not from muxing.c reference, maybe outdated or wrong */
-//            av_opt_set(output_codec_context->priv_data, "preset", "slow", 0);
-//        }
-
-        /* Some formats want stream headers to be separate. */
         if(output_format_context->oformat->flags & AVFMT_GLOBALHEADER) {
-            output_codec_context->flags |= CODEC_FLAG_GLOBAL_HEADER;
+            encoder_context->flags |= CODEC_FLAG_GLOBAL_HEADER;
         }
 
-        output_options = NULL;
-
-        ret = avcodec_open2(output_codec_context, output_codec, &output_options);
-
-        av_dict_free(&output_options);
-
+        ret = avcodec_open2(encoder_context, encoder, NULL);
         if(ret < 0) {
-            throw("Could not open output video codec");
+            throw(ret);
         }
 
-//        // Open encoder codec
-//        if( avcodec_open2(output_codec_context, output_codec, NULL) < 0 ) {
-//            av_log(NULL, AV_LOG_ERROR, "Could not open codec\n");
-//            exit(1);
-//        }
-
-//        encoder_output_file->open(output_file.absoluteFilePath().toUtf8().data(), std::ios::out | std::ios::binary);
-//        if ( !encoder_output_file->is_open() ) {
-//            av_log(NULL, AV_LOG_ERROR, "Could not open input file '%s'\n", output_file.absoluteFilePath().toUtf8().data());
-//            exit(1);
-//        }
-
-        // HEADS UP: muxing.c uses AVPicture !!!
-        output_frame = av_frame_alloc();
-
-        if (!output_frame) {
-            throw("Could not allocate video output frame");
+        ret = avcodec_parameters_from_context(output_stream->codecpar, encoder_context);
+        if(ret < 0) {
+            throw(ret);
         }
 
-        output_frame->format = output_codec_context->pix_fmt;
-        output_frame->width = output_codec_context->width;
-        output_frame->height = output_codec_context->height;
+        // According to examples/tests this apparently needs to be done manually
+        output_stream->time_base = encoder_context->time_base;
 
-        // The image can be allocated by any means and av_image_alloc() is just the most convenient way if av_malloc() is to be used
-        if( (ret = av_image_alloc(output_frame->data, output_frame->linesize, output_codec_context->width, output_codec_context->height, output_codec_context->pix_fmt, 1)) < 0) {
-            fprintf(stderr, "Could not allocate raw picture buffer\n");
-            exit(1);
+        encoder_frame = av_frame_alloc();
+        if(!encoder_frame) {
+            throw("Could not allocate encoder frame");
         }
-        // END HEADS UP
 
-        if(!(output_format->flags & AVFMT_NOFILE)) {
+        encoder_frame->format = encoder_context->pix_fmt;
+        encoder_frame->width = encoder_context->width;
+        encoder_frame->height = encoder_context->height;
+
+        ret = av_image_alloc(encoder_frame->data,
+                             encoder_frame->linesize,
+                             encoder_frame->width,
+                             encoder_frame->height,
+                             (AVPixelFormat)encoder_frame->format,
+                             1);
+        if(ret < 0) {
+            throw(ret);
+        }
+
+        if(!(output_format_context->oformat->flags & AVFMT_NOFILE)) {
             ret = avio_open(&output_format_context->pb,
                             output_file.absoluteFilePath().toUtf8().data(),
                             AVIO_FLAG_WRITE);
 
             if(ret < 0) {
-                throw("Could not open output file");
+                throw(ret);
             }
         }
 
-        ret = avformat_write_header(output_format_context, &output_options);
-
+        ret = avformat_write_header(output_format_context, NULL);
         if(ret < 0) {
-            throw("An error occured during writing the stream header");
+            throw(ret);
         }
 
-        // Possibly elsewhere, legacy code: encoder_packet = new AVPacket;
+        encoder_packet = av_packet_alloc();
+        if(encoder_packet == NULL) {
+            throw("Could not allocate encoder packet");
+        }
     }
-    catch(...) {
-        return;
+    catch(int code) {
+        char message[255];
+        av_make_error_string(message, 255, code);
+        av_log(NULL, AV_LOG_ERROR, "%d - %s\n", code, message);
+        throw(message);
     }
 }
 
 bool ZeitEngine::ExportFrame(AVFrame* frame, const QFileInfo output_file)
 {
-    int got_output_packet = 0;
     int ret;
 
     if(!exporter_initialized) {
@@ -1247,11 +1253,11 @@ bool ZeitEngine::ExportFrame(AVFrame* frame, const QFileInfo output_file)
               if(flip_y != rotate_90d_cw) { target_y = frame->height - 1 - y; }
 
               if(rotate_90d_cw) {
-                  memcpy(output_frame->data[0] + target_x * output_frame->linesize[0] + target_y,
+                  memcpy(encoder_frame->data[0] + target_x * encoder_frame->linesize[0] + target_y,
                          frame->data[0] + y * frame->linesize[0] + x,
                          sizeof(uint8_t));
               } else {
-                  memcpy(output_frame->data[0] + target_y * output_frame->linesize[0] + target_x,
+                  memcpy(encoder_frame->data[0] + target_y * encoder_frame->linesize[0] + target_x,
                          frame->data[0] + y * frame->linesize[0] + x,
                          sizeof(uint8_t));
               }
@@ -1270,11 +1276,11 @@ bool ZeitEngine::ExportFrame(AVFrame* frame, const QFileInfo output_file)
               // (Iterate over Cb and Cr Plane)
               for(int p = 1; p < 3; p++) {
                   if(rotate_90d_cw) {
-                      memcpy(output_frame->data[p] + target_x * output_frame->linesize[p] + target_y,
+                      memcpy(encoder_frame->data[p] + target_x * encoder_frame->linesize[p] + target_y,
                              frame->data[p] + y * frame->linesize[p] + x,
                              sizeof(uint8_t));
                   } else {
-                      memcpy(output_frame->data[p] + target_y * output_frame->linesize[p] + target_x,
+                      memcpy(encoder_frame->data[p] + target_y * encoder_frame->linesize[p] + target_x,
                              frame->data[p] + y * frame->linesize[p] + x,
                              sizeof(uint8_t));
                   }
@@ -1282,59 +1288,59 @@ bool ZeitEngine::ExportFrame(AVFrame* frame, const QFileInfo output_file)
           }
       }
 
-      output_frame->pts = sequence_iterator - source_sequence.constBegin();
+      encoder_frame->pts = sequence_iterator - source_sequence.constBegin();
     }
 
-    AVPacket output_packet;
-    av_init_packet(&output_packet);
-
-    ret = avcodec_encode_video2(output_codec_context,
-                                &output_packet,
-                                frame ? output_frame : NULL,
-                                &got_output_packet);
-
+    ret = avcodec_send_frame(encoder_context, frame ? encoder_frame : NULL);
     if(ret < 0) {
-        throw("Error encoding output video frame");
+        throw("Failed to send frame to encoder codec");
     }
 
-    if(got_output_packet) {
-        av_packet_rescale_ts(&output_packet,
-                             output_codec_context->time_base,
-                             output_stream->time_base);
+    // Receive packet(s) from encoder codec in a loop and write them out
+    while(ret >= 0) {
+        ret = avcodec_receive_packet(encoder_context, encoder_packet);
 
-        output_packet.stream_index = output_stream->index;
+        if(ret == AVERROR(EAGAIN)) {
+            return true; // No output at this stage, send more input
+        } else if(ret == AVERROR_EOF) {
+            return false; // No output and no packets will follow
+        } else if(ret < 0) {
+            throw(ret);
+        } else {
+            av_packet_rescale_ts(encoder_packet,
+                                 encoder_context->time_base,
+                                 output_stream->time_base);
 
-        ret = av_interleaved_write_frame(output_format_context,
-                                         &output_packet);
-    } else {
-        ret = 0;
+            encoder_packet->stream_index = output_stream->index;
+
+            ret = av_interleaved_write_frame(output_format_context, encoder_packet);
+            if(ret < 0) {
+               throw(ret);
+            }
+
+            av_packet_unref(encoder_packet);
+        }
     }
 
-    if(ret < 0) {
-        char t[1024];
-        av_make_error_string(t, 1024, ret);
-
-        throw("Error while writing output video frame");
-    }
-
-    return frame || got_output_packet;
-
+    return true;
 }
 
 void ZeitEngine::CloseExport()
 {
     av_write_trailer(output_format_context);
 
-    avcodec_close(output_codec_context);
+    avcodec_close(encoder_context);
+    avcodec_free_context(&encoder_context);
 
-    if(!(output_format->flags & AVFMT_NOFILE)) {
+    if(!(output_format_context->oformat->flags & AVFMT_NOFILE)) {
         avio_closep(&output_format_context->pb);
     }
 
     avformat_free_context(output_format_context);
 
-    av_freep(&output_frame->data[0]);
-    av_frame_free(&output_frame);
+    av_freep(&encoder_frame->data[0]);
+    av_frame_free(&encoder_frame);
+    av_packet_free(&encoder_packet);
 
     exporter_initialized = false;
 
