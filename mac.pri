@@ -2,9 +2,9 @@ mac {
 
     ICON = zeitmachine.icns
 
-    INCLUDEPATH += ../zeitmachine/dependencies/installed/ffmpeg-3.0.1/include
+    INCLUDEPATH += ../zeitmachine-qt/dependencies/installed/ffmpeg-3.3.3/include
 
-    QMAKE_LIBDIR += ../zeitmachine/dependencies/installed/ffmpeg-3.0.1/lib
+    QMAKE_LIBDIR += ../zeitmachine-qt/dependencies/installed/ffmpeg-3.3.3/lib
 
     LIBS += -lavfilter      \
             -lavformat      \
