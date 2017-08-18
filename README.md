@@ -1,6 +1,6 @@
 # Zeitmachine
 
-Qt 5.6, FFmpeg 3.0.1, x264
+Qt 5.9.1, FFmpeg 3.3.3, x264
 
 ## Dependencies Windows 10
 
