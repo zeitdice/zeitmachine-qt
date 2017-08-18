@@ -1,7 +1,7 @@
 @ECHO OFF
 
 SETLOCAL
-SET "RELEASE_DIR=C:\Users\simonrepp\zeitdice\build-zeitmachine-Desktop-Release\release"
+SET "RELEASE_DIR=C:\Users\simonrepp\zeitdice\build-zeitmachine-Desktop-Debug\debug"
 SET "FFMPEG_LIB_DIR=C:\Users\simonrepp\zeitdice\zeitmachine-qt\dependencies\ffmpeg-3.3.3-win64-shared\bin"
 SET "VC_REDIST_DIR=C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Redist\MSVC\14.11.25325\x64\Microsoft.VC141.CRT"
 SET "VC_UCRT_REDIST_DIR=C:\Program Files (x86)\Windows Kits\10\Redist\ucrt\DLLs\x64"
