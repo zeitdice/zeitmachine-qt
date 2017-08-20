@@ -16,3 +16,4 @@ Qt 5.9.1, FFmpeg 3.3.3, x264
 
 - FFMPEG runtime + dev packages
 - mesa-common-dev
+- build-essential, yasm

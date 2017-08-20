@@ -1,11 +1,11 @@
 linux {
 
-    INCLUDEPATH +=  ../zeitmachine/dependencies/installed/x264-snapshot-20141218-2245-stable/include \
-                    ../zeitmachine/dependencies/installed/ffmpeg-3.0.1/include
+    INCLUDEPATH +=  ../zeitmachine-qt/dependencies/installed/x264-snapshot-20170816-2245-stable/include \
+                    ../zeitmachine-qt/dependencies/installed/ffmpeg-3.3.3/include
 
-    QMAKE_LIBDIR += /usr/lib/nvidia-361 \
-                    ../zeitmachine/dependencies/installed/x264-snapshot-20141218-2245-stable/lib \
-                    ../zeitmachine/dependencies/installed/ffmpeg-3.0.1/lib
+    QMAKE_LIBDIR += /usr/lib/nvidia-375 \
+                    ../zeitmachine-qt/dependencies/installed/x264-snapshot-20170816-2245-stable/lib \
+                    ../zeitmachine-qt/dependencies/installed/ffmpeg-3.3.3/lib
 
     LIBS += -lavfilter      \
             -lavformat      \

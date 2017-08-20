@@ -8,9 +8,9 @@ DEPS="$SCRIPTS/../dependencies"
 INST="$DEPS/installed"
 SRC="$DEPS/sources"
 
-VERSION_FFMPEG="3.0.1"
-VERSION_QT="5.4.1"
-VERSION_X264="20141218-2245-stable"
+VERSION_FFMPEG="3.3.3"
+VERSION_QT="5.9.1"
+VERSION_X264="20170816-2245-stable"
 
 THREADS=$(nproc)
 
