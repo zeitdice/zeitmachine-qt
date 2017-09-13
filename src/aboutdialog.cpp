@@ -15,7 +15,7 @@ AboutDialog::AboutDialog(QWidget *parent) :
 
     text.append("This application is free software, licensed under the");
     text.append(" <a href=\"http://www.gnu.org/licenses/gpl-3.0.txt\">GNU General Public License, Version 3</a><br/>");
-    text.append("The full source code can be obtained as a downloadable package <a href=\"http://www.zeitdice.com/SOURCE_DISTRIBUTION_PACKAGE_GOES_HERE\">here TODO</a><br/><br/>");
+    text.append("The full source code can be obtained <a href=\"https://github.com/zeitdice/zeitmachine-qt\">here</a><br/><br/>");
 
     text.append("<b>The following third party technologies form part of this application:</b><br/><br/>");
     text.append("Qt 5.9.1 Community/Open Source Edition");
