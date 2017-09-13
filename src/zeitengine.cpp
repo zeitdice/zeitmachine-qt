@@ -814,7 +814,7 @@ void ZeitEngine::InitFilter(AVFrame* frame, ZeitFilter filter)
 
         if( (ret = avfilter_graph_config(filter_graph, NULL)) < 0)
         {
-            return;
+            throw(ret);
         }
 
         // Allocate filter frame
