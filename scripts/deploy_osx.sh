@@ -2,7 +2,7 @@
 
 SCRIPTS=$PWD
 ASSETS_DIR="$SCRIPTS/../assets"
-RELEASE_DIR="/Users/simonrepp/zeitdice/build-zeitmachine-Desktop_Qt_5_9_1_clang_64bit-Debug"
+RELEASE_DIR="/Users/simonrepp/zeitdice/build-zeitmachine-Desktop_Qt_5_9_1_clang_64bit-Release"
 QT_REDIST_BIN_DIR="/Users/simonrepp/Qt/5.9.1/clang_64/bin"
 
 # Deploy with macdeployqt
