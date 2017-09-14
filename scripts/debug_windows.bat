@@ -11,6 +11,7 @@ SET "QT_REDIST_DIR=C:\Qt\5.9.1\msvc2017_64\bin"
 
 REM Clean from any compilation artifacts
 del /s/q "%BUILD_DIR%\*.cpp"
+del /s/q "%BUILD_DIR%\*.h"
 del /s/q "%BUILD_DIR%\*.obj"
 del /s/q "%BUILD_DIR%\*.res"
 
