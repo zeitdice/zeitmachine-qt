@@ -364,14 +364,15 @@ void MainWindow::on_actionOpen_triggered()
         QFileInfoList files = dir.entryInfoList();
 
         // Remove 0 byte images
-        for(auto files_iterator = files.begin(); files_iterator != files.end(); ++files_iterator) {
-            if((*files_iterator).size() == 0) {
-                files.removeAt(files_iterator - files.begin());
+        QMutableListIterator<QFileInfo> files_iterator(files);
+        while(files_iterator.hasNext()) {
+            if(files_iterator.next().size() == 0) {
+                files_iterator.remove();
             }
         }
 
         // Break and gracefully stop if there is no supported footage available now
-        if(files.length() < 1) {
+        if(files.empty()) {
             QMessageBox::information(this,
                                      "No supported footage found",
                                      "Your chosen folder does not contain images, or does not contain any of a format that is supported (.jpg/.jpeg/.png/.zd).");
