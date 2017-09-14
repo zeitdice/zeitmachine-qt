@@ -1,12 +1,15 @@
 #!/bin/bash
 
-SCRIPTS=$PWD
-BUILD_DIR="$SCRIPTS/../../build-zeitmachine-Desktop_Qt_5_9_1_GCC_64bit-Debug/"
-QT_LIB_DIR="/home/simon/Qt/5.9.1/gcc_64/lib"
-FFMPEG_LIB_DIR="/home/simon/zeitdice/zeitmachine-qt/dependencies/installed/ffmpeg-3.3.3/lib"
-X264_LIB_DIR="/home/simon/zeitdice/zeitmachine-qt/dependencies/installed/x264-snapshot-20170816-2245-stable/lib"
+SCRIPTS_DIR=$PWD
+PROJECT_DIR="$SCRIPTS_DIR/.."
+ZEITDICE_DIR="$PROJECT_DIR/.."
+HOME_DIR="$ZEITDICE_DIR/.."
+BUILD_DIR="$ZEITDICE_DIR/build-zeitmachine-Desktop_Qt_5_9_1_GCC_64bit-Debug/"
+QT_LIB_DIR="$HOME_DIR/Qt/5.9.1/gcc_64/lib"
+FFMPEG_LIB_DIR="$PROJECT_DIR/dependencies/installed/ffmpeg-3.3.3/lib"
+X264_LIB_DIR="$PROJECT_DIR/dependencies/installed/x264-snapshot-20170816-2245-stable/lib"
 
-cp $SCRIPTS/zeitmachine.sh $BUILD_DIR
+cp $SCRIPTS_DIR/zeitmachine.sh $BUILD_DIR
 
 cp /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.21 $BUILD_DIR
 cp /lib/x86_64-linux-gnu/libgcc_s.so.1 $BUILD_DIR
@@ -27,4 +30,4 @@ cp $FFMPEG_LIB_DIR/libavcodec.so.57 $BUILD_DIR
 cp $FFMPEG_LIB_DIR/libswscale.so.4 $BUILD_DIR
 cp $FFMPEG_LIB_DIR/libavutil.so.55 $BUILD_DIR
 
-cp $X264_LIB_DIR/libx264.so.142 $BUILD_DIR
+cp $X264_LIB_DIR/libx264.so.148 $BUILD_DIR
