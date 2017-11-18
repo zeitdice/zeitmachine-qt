@@ -67,64 +67,78 @@ ZeitEngine::~ZeitEngine()
     FreeRescaler();
 }
 
-void ZeitEngine::InitDecoder()
+bool ZeitEngine::InitDecoder()
 {
+    sequence_iterator = source_sequence.constBegin();
+    bool initialized = false;
     int ret;
 
-    try
-    {
-        QString first_image = (*source_sequence.constBegin()).absoluteFilePath();
+    do {
+        try {
+            AVDictionary *options = NULL;
 
-        AVDictionary *options = NULL;
+            if(operation_mode == ZEIT_MODE_ZD) {
+                av_dict_set(&options, "video_size", "1944x1944", 0);
+                av_dict_set(&options, "pixel_format", "bayer_grbg16le", 0);
+            }
 
-        if(operation_mode == ZEIT_MODE_ZD) {
-            av_dict_set(&options, "video_size", "1944x1944", 0);
-            av_dict_set(&options, "pixel_format", "bayer_grbg16le", 0);
+            QByteArray image_bytearray = (*sequence_iterator).absoluteFilePath().toUtf8();
+            const char* image_cstr = image_bytearray.data();
+
+            // Open input file
+            if ((ret = avformat_open_input(&decoder_format_context, image_cstr, decoder_format, &options)) < 0) {
+                av_log(NULL, AV_LOG_ERROR, "Failed to open input file '%s'\n", image_cstr);
+                throw(ret);
+            }
+
+            // TODO: Check if freeing is a problem if not setting (probably not, quick evaluation)
+            av_dict_free(&options);
+
+            if(operation_mode == ZEIT_MODE_ZD) {
+                decoder_format_context->streams[0]->codecpar->codec_id = AV_CODEC_ID_RAWVIDEO;
+            }
+
+            // Find decoder codec
+            decoder_codec_parameters = decoder_format_context->streams[0]->codecpar;
+            if( !(decoder_codec = avcodec_find_decoder(decoder_codec_parameters->codec_id)) ) {
+                av_log(NULL, AV_LOG_ERROR, "Failed to find input codec\n");
+                ret = AVERROR(EINVAL);
+                throw(ret);
+            }
+
+            // Allocate decoder codec context
+            decoder_codec_context =  avcodec_alloc_context3(decoder_codec);
+
+            // Open decoder codec
+            if( (ret = avcodec_open2(decoder_codec_context, decoder_codec, NULL)) < 0) {
+                av_log(NULL, AV_LOG_ERROR, "Failed to open input codec\n");
+                throw(ret);
+            }
+
+            // Allocate decoder frame
+            if( !(decoder_frame = av_frame_alloc()) ) {
+                av_log(NULL, AV_LOG_ERROR, "Failed to allocate decoder frame\n");
+                ret = AVERROR(ENOMEM);
+                throw(ret);
+            }
+
+            initialized = true;
         }
+        catch(int code) {
+            char message[255];
+            av_make_error_string(message, 255, code);
+            av_log(NULL, AV_LOG_ERROR, "%d - %s\n", code, message);
 
-        // Open input file
-        if ((ret = avformat_open_input(&decoder_format_context, first_image.toUtf8().data(), decoder_format, &options)) < 0) {
-            av_log(NULL, AV_LOG_ERROR, "Failed to open input file '%s'\n", first_image.toUtf8().data());
-            throw(ret);
+            // TODO: Might handle this specifially on higher level at some point
+            // throw(message);
+
+            // If initializing fails (e.g. faulty frame) we abandon the frame
+            // and just skip to the next iteration with the next frame
+            sequence_iterator++;
         }
+    } while(!initialized && sequence_iterator != source_sequence.constEnd());
 
-        // TODO: Check if freeing is a problem if not setting (probably not, quick evaluation)
-        av_dict_free(&options);
-
-        if(operation_mode == ZEIT_MODE_ZD) {
-            decoder_format_context->streams[0]->codecpar->codec_id = AV_CODEC_ID_RAWVIDEO;
-        }
-
-        // Find decoder codec
-        decoder_codec_parameters = decoder_format_context->streams[0]->codecpar;
-        if( !(decoder_codec = avcodec_find_decoder(decoder_codec_parameters->codec_id)) ) {
-            av_log(NULL, AV_LOG_ERROR, "Failed to find input codec\n");
-            ret = AVERROR(EINVAL);
-            throw(ret);
-        }
-
-        // Allocate decoder codec context
-        decoder_codec_context =  avcodec_alloc_context3(decoder_codec);
-
-        // Open decoder codec
-        if( (ret = avcodec_open2(decoder_codec_context, decoder_codec, NULL)) < 0) {
-            av_log(NULL, AV_LOG_ERROR, "Failed to open input codec\n");
-            throw(ret);
-        }
-
-        // Allocate decoder frame
-        if( !(decoder_frame = av_frame_alloc()) ) {
-            av_log(NULL, AV_LOG_ERROR, "Failed to allocate decoder frame\n");
-            ret = AVERROR(ENOMEM);
-            throw(ret);
-        }
-    }
-    catch(int code) {
-        char message[255];
-        av_make_error_string(message, 255, code);
-        av_log(NULL, AV_LOG_ERROR, "%d - %s\n", code, message);
-        throw(message);
-    }
+    return initialized;
 }
 
 void ZeitEngine::FreeDecoder()
@@ -154,6 +168,8 @@ void ZeitEngine::Load(const QFileInfoList& sequence)
         operation_mode = ZEIT_MODE_GENERAL;
     }
 
+    // TODO: Might handle returned success/failure of initialization at some point
+    //       This would need some channel for user feedback: "Hey I failed, sorry!"
     InitDecoder();
 
     Play();
@@ -241,7 +257,12 @@ void ZeitEngine::Play()
             sequence_iterator = source_sequence.constBegin();
         }
 
-        DecodeFrame();
+        if(!DecodeFrame()) {
+            // If decoding fails (e.g. faulty frame) we abandon the frame
+            // and just skip to the next iteration with the next frame
+            ++sequence_iterator;
+            continue;
+        }
 
         if(!display_initialized || (rotate_90d_cw != rotation_initialized)) {
 
@@ -380,7 +401,12 @@ void ZeitEngine::Export(const QFileInfo file)
             ZeitFilter filter = filter_flag;
             control_mutex.unlock();
 
-            DecodeFrame();
+            if(!DecodeFrame()) {
+                // If decoding fails (e.g. faulty frame) we abandon the frame
+                // and just skip to the next iteration with the next frame
+                sequence_iterator++;
+                continue;
+            }
 
             if(operation_mode == ZEIT_MODE_ZD) {
                 DebayerFrame(decoder_frame, false);
@@ -429,7 +455,7 @@ void ZeitEngine::Export(const QFileInfo file)
     emit MessageUpdated("Export complete");
 }
 
-void ZeitEngine::DecodeFrame()
+bool ZeitEngine::DecodeFrame()
 {
     int ret;
 
@@ -442,7 +468,7 @@ void ZeitEngine::DecodeFrame()
         // Open input file
         if ((ret = avformat_open_input(&decoder_format_context, image_cstr, decoder_format, NULL)) < 0) {
             av_log(NULL, AV_LOG_ERROR, "Failed to open input file '%s'\n", image_cstr);
-            return;
+            throw(ret);
         }
 
         // Allocate decoder packet
@@ -470,6 +496,7 @@ void ZeitEngine::DecodeFrame()
         // Free decoder packet
         av_packet_unref(decoder_packet);
 
+        // TODO: Verify sometime if this is still relevant
         // Convert deprecated pixel formats to favored ones
         // See http://stackoverflow.com/questions/23067722/swscaler-warning-deprecated-pixel-format-used
         switch (decoder_frame->format) {
@@ -484,6 +511,7 @@ void ZeitEngine::DecodeFrame()
             break;
         case AV_PIX_FMT_YUVJ440P:
             decoder_frame->format = AV_PIX_FMT_YUV440P;
+            break;
         default:
             decoder_frame->format = (AVPixelFormat)decoder_frame->format;
             break;
@@ -493,8 +521,19 @@ void ZeitEngine::DecodeFrame()
         char message[255];
         av_make_error_string(message, 255, code);
         av_log(NULL, AV_LOG_ERROR, "%d - %s\n", code, message);
-        throw(message);
+
+        // In case it was already allocated before the error we unref it
+        if(decoder_packet) {
+            av_packet_unref(decoder_packet);
+        }
+
+        // TODO: Might handle this specifially on higher level at some point
+        // throw(message);
+
+        return false;
     }
+
+    return true;
 }
 
 void ZeitEngine::DebayerFrame(AVFrame *frame, bool fast_debayering)

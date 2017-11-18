@@ -187,8 +187,11 @@ class ZeitEngine : public QObject
      * Opens and decodes the first image of the sequence to determine and store
      * file format, pixel format, width, height and the likes for all following
      * decoding procedures.
+     *
+     * \return True if successfully initialized, false if not a single frame in
+     *         in the sequence was usable for initialization
      */
-    void InitDecoder();
+    bool InitDecoder();
 
     /*!
      * \brief Free all decoder members
@@ -203,8 +206,10 @@ class ZeitEngine : public QObject
      * Read a frame from disk into the `decoder_frame` buffer. The image
      * currently pointed to by the `sequence_iterator` variable tells the
      * function which image to decode from the whole sequence.
+     *
+     * \return True for successful decode, False otherwise (indicating we should skip to next frame altogether)
      */
-    void DecodeFrame();
+    bool DecodeFrame();
 
 
     /*!
