@@ -1,8 +1,11 @@
 # Ignore user-specific Qt project settings
 *.pro.user*
 
+# Ignore builds created by script
+/builds/
+
 # Ignore dependencies obtained with the platform build scripts
-dependencies/
+/dependencies/
 
 # Ignore documentation folders generated with Doxygen
 /html/
